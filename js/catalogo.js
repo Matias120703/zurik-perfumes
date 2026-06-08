@@ -23,7 +23,7 @@ const PERFUME_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 /* Estado global de la tienda: productos (sincronizados desde Firestore),
    datos de contacto/WhatsApp (también desde Firestore) y carrito (local).
    Lo comparten app.js (tienda) y admin.js (panel). */
-let state={products:[],wa:'595984158986',group:'',cart:{}};
+let state={products:[],wa:'595984158986',group:'',cart:{},ventas:[],gastos:[]};
 
 /* ---------- Persistencia del carrito (localStorage) ---------- */
 const CART_KEY='zurikCart';
@@ -40,6 +40,27 @@ function saveCart(){
 /* ---------- Utilidades ---------- */
 function fmt(n){return new Intl.NumberFormat('es-PY').format(n)}
 function escapeHtml(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+/* ---------- Calificaciones (estrellas + promedio + reseñas) ----------
+   Se usa tanto en la grilla del catálogo como en la ficha de detalle. Solo
+   se muestra cuando el perfume tiene al menos una reseña cargada desde
+   admin; mientras no haya reseñas, renderRating() devuelve '' y no ocupa
+   espacio en el layout. */
+const STAR_SVG='<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.5 6.9.7-5.2 4.8 1.4 6.9L12 17.7 5.9 21.4l1.4-6.9-5.2-4.8 6.9-.7z"/></svg>';
+function renderStars(rating){
+  const r=Math.round(Math.min(5,Math.max(0,Number(rating)||0)));
+  let html='';
+  for(let i=1;i<=5;i++)html+='<span class="star'+(i<=r?' filled':'')+'">'+STAR_SVG+'</span>';
+  return html;
+}
+function renderRating(p){
+  const count=Number(p.reviewCount)||0;
+  if(!count)return '';
+  const rating=Number(p.rating)||0;
+  return '<div class="rating"><span class="stars">'+renderStars(rating)+'</span>'+
+    '<span class="score tabular">'+rating.toFixed(1)+'</span>'+
+    '<span class="count">('+count+(count===1?' reseña':' reseñas')+')</span></div>';
+}
 
 /* ---------- Aviso flotante (toast) ----------
    Se usa tanto en la tienda ("Añadido al carrito") como en el panel admin

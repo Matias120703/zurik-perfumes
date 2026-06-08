@@ -61,6 +61,7 @@ function renderGrid(){
       '<div class="card-body">'+
         (p.house?'<span class="house">'+escapeHtml(p.house)+'</span>':'')+
         '<h3>'+escapeHtml(p.name)+'</h3>'+
+        renderRating(p)+
         (p.notes?'<p class="notes">'+escapeHtml(p.notes)+'</p>':'<p class="notes"></p>')+
         '<div class="card-foot">'+
           '<span class="price tabular"><span class="cur">₲</span>'+fmt(p.price)+'</span>'+
@@ -93,6 +94,9 @@ function renderDetail(p){
   const houseEl=document.getElementById('detailHouse');
   houseEl.textContent=p.house||'';houseEl.style.display=p.house?'':'none';
   document.getElementById('detailName').textContent=p.name||'';
+  const ratingEl=document.getElementById('detailRating');
+  ratingEl.innerHTML=renderRating(p);
+  ratingEl.style.display=(Number(p.reviewCount)||0)?'':'none';
   document.getElementById('detailPrice').innerHTML='<span class="cur">₲</span>'+fmt(p.price);
 
   const catEl=document.getElementById('detailCat');

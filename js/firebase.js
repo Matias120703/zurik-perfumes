@@ -18,15 +18,31 @@
                               ajustes (número de WhatsApp y enlace del
                               grupo mayorista).
      · saveSettings(datos)    Guarda/combina ajustes.
+     · watchVentas(cb)        Suscribe en tiempo real a la colección
+                              "ventas" (dashboard financiero del admin).
+     · createVenta/updateVenta/deleteVenta   CRUD de ventas.
+     · watchGastos(cb)        Suscribe en tiempo real a la colección
+                              "gastos" (dashboard financiero del admin).
+     · createGasto/updateGasto/deleteGasto   CRUD de gastos.
 
    Estructura en Firestore:
      · Colección "perfumes" — un documento por perfume con los campos
        nombre, marca, precio, categoria, imagen, descripcion, etiqueta
-       (insignia opcional tipo "Nuevo" / "Más vendido") y los campos de la
+       (insignia opcional tipo "Nuevo" / "Más vendido"), los campos de la
        página de detalle: notasSalida, notasCorazon, notasFondo, duracion
-       y proyeccion.
+       y proyeccion, y las calificaciones: calificacion (promedio 0-5) y
+       numeroResenas (cantidad de reseñas).
      · Colección "ajustes" → documento "general" con los campos
        wa (número de WhatsApp) y group (enlace del grupo mayorista).
+     · Colección "ventas" — un documento por venta registrada manualmente
+       desde el dashboard financiero, con los campos monto, fecha
+       (texto "AAAA-MM-DD"), nota (opcional), y producto/cantidad
+       (opcionales: nombre del perfume vendido y unidades, usados para
+       calcular el gráfico de los últimos 30 días y la tarjeta
+       "Producto más vendido").
+     · Colección "gastos" — un documento por gasto registrado desde el
+       dashboard financiero, con los campos concepto, categoria, monto,
+       fecha (texto "AAAA-MM-DD") y observaciones.
 
    Requisitos (ya resueltos en index.html / admin.html):
      1. Cargar el SDK "compat" de Firebase ANTES de este archivo:
@@ -48,6 +64,8 @@ const FIREBASE_CONFIG = {
 const PERFUMES_COLLECTION='perfumes';
 const SETTINGS_COLLECTION='ajustes';
 const SETTINGS_DOC='general';
+const SALES_COLLECTION='ventas';
+const EXPENSES_COLLECTION='gastos';
 
 let firebaseApp=null;
 let firestoreDb=null;
@@ -99,7 +117,9 @@ function perfumeFromDoc(doc){
     heartNotes:d.notasCorazon||'',
     baseNotes:d.notasFondo||'',
     duration:d.duracion||'',
-    projection:d.proyeccion||''
+    projection:d.proyeccion||'',
+    rating:Number(d.calificacion)||0,
+    reviewCount:Number(d.numeroResenas)||0
   };
 }
 function perfumeToDoc(p){
@@ -115,7 +135,9 @@ function perfumeToDoc(p){
     notasCorazon:p.heartNotes||'',
     notasFondo:p.baseNotes||'',
     duracion:p.duration||'',
-    proyeccion:p.projection||''
+    proyeccion:p.projection||'',
+    calificacion:Number(p.rating)||0,
+    numeroResenas:Number(p.reviewCount)||0
   };
 }
 
@@ -162,4 +184,74 @@ function saveSettings(data){
   const db=getFirestoreDb();
   if(!db)return Promise.reject(new Error('Firestore no disponible'));
   return db.collection(SETTINGS_COLLECTION).doc(SETTINGS_DOC).set(data,{merge:true});
+}
+
+/* ==========================================================================
+   Dashboard financiero — colecciones "ventas" y "gastos"
+   --------------------------------------------------------------------------
+   Ambas se cargan a mano desde el panel admin (sin relación con el carrito
+   de la tienda, que solo arma el mensaje de WhatsApp y no persiste nada).
+   La fecha se guarda como texto "AAAA-MM-DD" para poder calcular los
+   totales del día/mes con una simple comparación de strings.
+   ========================================================================== */
+function ventaFromDoc(doc){
+  const d=doc.data()||{};
+  return {id:doc.id,monto:Number(d.monto)||0,fecha:d.fecha||'',nota:d.nota||'',producto:d.producto||'',cantidad:Number(d.cantidad)||0};
+}
+function ventaToDoc(v){
+  return {monto:Number(v.monto)||0,fecha:v.fecha||'',nota:v.nota||'',producto:v.producto||'',cantidad:Number(v.cantidad)||0};
+}
+function watchVentas(onChange){
+  const db=getFirestoreDb();
+  if(!db){onChange([]);return noop;}
+  return db.collection(SALES_COLLECTION).onSnapshot(
+    snap=>onChange(snap.docs.map(ventaFromDoc)),
+    err=>console.error('[ZURIK] No se pudo sincronizar las ventas con Firestore:',err)
+  );
+}
+function createVenta(data){
+  const db=getFirestoreDb();
+  if(!db)return Promise.reject(new Error('Firestore no disponible'));
+  return db.collection(SALES_COLLECTION).add(ventaToDoc(data));
+}
+function updateVenta(id,data){
+  const db=getFirestoreDb();
+  if(!db)return Promise.reject(new Error('Firestore no disponible'));
+  return db.collection(SALES_COLLECTION).doc(id).set(ventaToDoc(data));
+}
+function deleteVenta(id){
+  const db=getFirestoreDb();
+  if(!db)return Promise.reject(new Error('Firestore no disponible'));
+  return db.collection(SALES_COLLECTION).doc(id).delete();
+}
+
+function gastoFromDoc(doc){
+  const d=doc.data()||{};
+  return {id:doc.id,concepto:d.concepto||'',categoria:d.categoria||'',monto:Number(d.monto)||0,fecha:d.fecha||'',observaciones:d.observaciones||''};
+}
+function gastoToDoc(g){
+  return {concepto:g.concepto||'',categoria:g.categoria||'',monto:Number(g.monto)||0,fecha:g.fecha||'',observaciones:g.observaciones||''};
+}
+function watchGastos(onChange){
+  const db=getFirestoreDb();
+  if(!db){onChange([]);return noop;}
+  return db.collection(EXPENSES_COLLECTION).onSnapshot(
+    snap=>onChange(snap.docs.map(gastoFromDoc)),
+    err=>console.error('[ZURIK] No se pudo sincronizar los gastos con Firestore:',err)
+  );
+}
+function createGasto(data){
+  const db=getFirestoreDb();
+  if(!db)return Promise.reject(new Error('Firestore no disponible'));
+  return db.collection(EXPENSES_COLLECTION).add(gastoToDoc(data));
+}
+function updateGasto(id,data){
+  const db=getFirestoreDb();
+  if(!db)return Promise.reject(new Error('Firestore no disponible'));
+  return db.collection(EXPENSES_COLLECTION).doc(id).set(gastoToDoc(data));
+}
+function deleteGasto(id){
+  const db=getFirestoreDb();
+  if(!db)return Promise.reject(new Error('Firestore no disponible'));
+  return db.collection(EXPENSES_COLLECTION).doc(id).delete();
 }

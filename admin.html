@@ -41,38 +41,112 @@
     <!-- Dashboard -->
     <div id="dashView" style="display:none">
       <div class="admin-top">
-        <h2>Inventario<small>Zurik · Administración</small></h2>
+        <h2>Administración<small>Zurik · Panel</small></h2>
         <div class="admin-actions">
           <button class="btn btn-ghost" id="backStore">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Ver tienda
           </button>
+        </div>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="tab-btn active" data-tab="inventoryTab">Inventario</button>
+        <button class="tab-btn" data-tab="financeTab">Dashboard financiero</button>
+      </div>
+
+      <!-- ---- Pestaña: Inventario ---- -->
+      <div id="inventoryTab" class="admin-panel">
+        <div class="panel-head">
+          <h3>Catálogo</h3>
           <button class="btn btn-primary" id="newProdBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
             Nuevo perfume
           </button>
         </div>
-      </div>
 
-      <div class="admin-settings">
-        <div class="field">
-          <label for="waNumber">Número de WhatsApp para pedidos</label>
-          <input class="input tabular" id="waNumber" inputmode="tel" placeholder="595984158986">
-          <span class="hint">Con código de país, sin + ni espacios. Ej: 595984158986</span>
+        <div class="admin-settings">
+          <div class="field">
+            <label for="waNumber">Número de WhatsApp para pedidos</label>
+            <input class="input tabular" id="waNumber" inputmode="tel" placeholder="595984158986">
+            <span class="hint">Con código de país, sin + ni espacios. Ej: 595984158986</span>
+          </div>
+          <button class="btn btn-primary" id="saveWa">Guardar número</button>
         </div>
-        <button class="btn btn-primary" id="saveWa">Guardar número</button>
-      </div>
 
-      <div class="admin-settings">
-        <div class="field">
-          <label for="waGroup">Enlace del grupo mayorista de WhatsApp</label>
-          <input class="input" id="waGroup" inputmode="url" placeholder="https://chat.whatsapp.com/XXXXXXXX">
-          <span class="hint">Se muestra a quien lleve 5 o más perfumes en el carrito.</span>
+        <div class="admin-settings">
+          <div class="field">
+            <label for="waGroup">Enlace del grupo mayorista de WhatsApp</label>
+            <input class="input" id="waGroup" inputmode="url" placeholder="https://chat.whatsapp.com/BEldr9UuIVhD5fCsT4Gghy">
+            <span class="hint">Se muestra a quien lleve 5 o más perfumes en el carrito.</span>
+          </div>
+          <button class="btn btn-primary" id="saveGroup">Guardar grupo</button>
         </div>
-        <button class="btn btn-primary" id="saveGroup">Guardar grupo</button>
+
+        <div id="adminList"></div>
       </div>
 
-      <div id="adminList"></div>
+      <!-- ---- Pestaña: Dashboard financiero ---- -->
+      <div id="financeTab" class="admin-panel" style="display:none">
+        <div class="panel-head">
+          <h3>Resumen financiero</h3>
+        </div>
+        <div class="finance-stats" id="financeStats"></div>
+
+        <div class="panel-head">
+          <h3>Ventas vs Gastos <span class="chart-subtitle" id="financeChartSubtitle"></span></h3>
+        </div>
+        <div class="finance-filterbar">
+          <div class="qf-group" id="financeQuickFilters">
+            <button class="qf-btn" data-range="today">Hoy</button>
+            <button class="qf-btn" data-range="week">Esta semana</button>
+            <button class="qf-btn" data-range="month">Este mes</button>
+            <button class="qf-btn" data-range="year">Este año</button>
+            <button class="qf-btn" data-range="all">Todo</button>
+          </div>
+          <div class="finance-daterange">
+            <div class="field">
+              <label for="filterDesde">Desde</label>
+              <input class="input tabular" type="date" id="filterDesde">
+            </div>
+            <div class="field">
+              <label for="filterHasta">Hasta</label>
+              <input class="input tabular" type="date" id="filterHasta">
+            </div>
+          </div>
+        </div>
+        <div class="finance-stats finance-stats-compact" id="filteredStats"></div>
+        <div class="finance-charts">
+          <div class="chart-card">
+            <div class="chart-wrap"><canvas id="financeChart"></canvas></div>
+          </div>
+          <div class="top-product-card" id="topProductCard"></div>
+        </div>
+
+        <div class="panel-head">
+          <h3>Ventas</h3>
+          <div class="admin-actions">
+            <button class="btn btn-ghost" id="convertOrderBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h13l-3-3m3 3l-3 3M20 17H7l3 3m-3-3l3-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Convertir pedido en venta
+            </button>
+            <button class="btn btn-primary" id="newVentaBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+              Registrar venta
+            </button>
+          </div>
+        </div>
+        <div id="ventasList"></div>
+
+        <div class="panel-head">
+          <h3>Gastos</h3>
+          <button class="btn btn-primary" id="newGastoBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+            Registrar gasto
+          </button>
+        </div>
+        <div id="gastosList"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -153,11 +227,117 @@
         <label for="fBadge">Etiqueta destacada</label>
         <input class="input" id="fBadge" placeholder="Ej: Nuevo, Más vendido (opcional)">
       </div>
+
+      <div class="field-group-label">Calificaciones</div>
+      <div class="form-row">
+        <div class="field">
+          <label for="fRating">Calificación promedio (0 a 5)</label>
+          <input class="input tabular" id="fRating" inputmode="decimal" placeholder="Ej: 4.8">
+        </div>
+        <div class="field">
+          <label for="fReviewCount">Cantidad de reseñas</label>
+          <input class="input tabular" id="fReviewCount" inputmode="numeric" placeholder="Ej: 23">
+        </div>
+      </div>
       <span class="err" id="formErr">Completa el nombre y un precio válido.</span>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="modalCancel">Cancelar</button>
       <button class="btn btn-primary" id="modalSave">Guardar perfume</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL DE VENTA ============ -->
+<div class="modal-scrim" id="ventaScrim">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="ventaModalTitle">Registrar venta</h3>
+      <button class="icon-btn" id="ventaModalClose" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-form">
+      <div class="form-row">
+        <div class="field">
+          <label for="vMonto">Monto (₲) *</label>
+          <input class="input tabular" id="vMonto" inputmode="numeric" placeholder="350.000">
+        </div>
+        <div class="field">
+          <label for="vFecha">Fecha *</label>
+          <input class="input" type="date" id="vFecha">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="vProducto">Producto vendido</label>
+          <select class="input" id="vProducto"><option value="">— Sin producto asociado —</option></select>
+          <span class="hint">Opcional. Así se calcula la tarjeta “Producto más vendido”.</span>
+        </div>
+        <div class="field">
+          <label for="vCantidad">Cantidad</label>
+          <input class="input tabular" type="number" id="vCantidad" inputmode="numeric" min="1" step="1" placeholder="1">
+        </div>
+      </div>
+      <div class="field">
+        <label for="vNota">Nota</label>
+        <input class="input" id="vNota" placeholder="Ej: Pedido WhatsApp · Noir Absolu x2 (opcional)">
+      </div>
+      <span class="err" id="ventaErr">Completa el monto y la fecha.</span>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="ventaModalCancel">Cancelar</button>
+      <button class="btn btn-primary" id="ventaModalSave">Guardar venta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL DE GASTO ============ -->
+<div class="modal-scrim" id="gastoScrim">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="gastoModalTitle">Registrar gasto</h3>
+      <button class="icon-btn" id="gastoModalClose" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-form">
+      <div class="form-row">
+        <div class="field">
+          <label for="gConcepto">Concepto *</label>
+          <input class="input" id="gConcepto" placeholder="Ej: Campaña de Instagram">
+        </div>
+        <div class="field">
+          <label for="gCategoria">Categoría</label>
+          <select class="input" id="gCategoria">
+            <option>Facebook Ads</option>
+            <option>Google Ads</option>
+            <option>Packaging</option>
+            <option>Combustible</option>
+            <option>Imprevistos</option>
+            <option>Otros</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="gMonto">Monto (₲) *</label>
+          <input class="input tabular" id="gMonto" inputmode="numeric" placeholder="150.000">
+        </div>
+        <div class="field">
+          <label for="gFecha">Fecha *</label>
+          <input class="input" type="date" id="gFecha">
+        </div>
+      </div>
+      <div class="field">
+        <label for="gObservaciones">Observaciones</label>
+        <textarea class="input" id="gObservaciones" placeholder="Detalles adicionales (opcional)"></textarea>
+      </div>
+      <span class="err" id="gastoErr">Completa el concepto, el monto y la fecha.</span>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="gastoModalCancel">Cancelar</button>
+      <button class="btn btn-primary" id="gastoModalSave">Guardar gasto</button>
     </div>
   </div>
 </div>
@@ -174,6 +354,7 @@
      al final. -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="js/firebase.js"></script>
 <script src="js/catalogo.js"></script>
 <script src="js/admin.js"></script>

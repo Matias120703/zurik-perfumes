@@ -42,9 +42,7 @@ Construir una plantilla premium para perfumerías que luego será reutilizada pa
 * Notas de fondo.
 * Duración.
 * Proyección.
-* Calificaciones.
 * Comentarios.
-* Dashboard financiero.
 * Costos.
 * Ganancias.
 * Inventario.
@@ -74,16 +72,42 @@ Construir una plantilla premium para perfumerías que luego será reutilizada pa
 - Página individual de perfume (modal de detalle desde el catálogo).
 - Notas de salida, corazón y fondo (editables en admin, visibles en la ficha).
 - Duración y proyección (editables en admin, visibles en la ficha).
+- Calificaciones: promedio y cantidad de reseñas editables en admin
+  (campos "Calificación promedio" y "Cantidad de reseñas"), guardadas en
+  Firestore (calificacion, numeroResenas) y mostradas con estrellas doradas
+  en formato "⭐⭐⭐⭐⭐ 4.8 (23 reseñas)" debajo del nombre del perfume, tanto
+  en las tarjetas del catálogo como en la ficha de detalle. Solo se muestran
+  cuando hay al menos una reseña cargada. Sincronizadas en tiempo real con
+  Firestore.
+- Dashboard financiero (pestaña propia dentro del panel admin, junto a
+  "Inventario"):
+  - Resumen con 7 tarjetas en tiempo real: ventas del día/mes/totales,
+    gastos del día/mes/totales y ganancia neta (ventas totales − gastos
+    totales).
+  - Módulo "Ventas": registro manual (monto, fecha, nota opcional) con
+    alta/edición/borrado. Las ventas se cargan a mano porque el carrito de
+    la tienda solo arma el mensaje de WhatsApp y no guarda pedidos en
+    Firestore — así los totales reflejan ventas confirmadas, no consultas
+    que no se concretaron. Botón "Convertir pedido en venta": atajo que
+    abre el mismo formulario de venta pre-cargado (fecha de hoy, foco en
+    el monto, nota "Pedido confirmado por WhatsApp") para anotar en
+    segundos un pedido de WhatsApp apenas se confirma el pago — no crea
+    nada automáticamente, solo agiliza la carga manual.
+  - Módulo "Gastos": registro manual (concepto, categoría —Facebook Ads,
+    Google Ads, Packaging, Combustible, Imprevistos, Otros—, monto, fecha,
+    observaciones) con alta/edición/borrado.
+  - Guardado en Firestore (colecciones "ventas" y "gastos"; fecha en texto
+    "AAAA-MM-DD"), sincronizado en tiempo real (watchVentas/watchGastos):
+    los totales se recalculan solos ante cualquier alta, edición o borrado,
+    incluso desde otro dispositivo.
 
 ## Próxima prioridad
 
-1. Calificaciones.
-2. Comentarios.
+1. Comentarios.
 
 ## Fase 2 - Administración
 
-9. Dashboard financiero.
-10. Costos.
-11. Ganancias.
-12. Inventario.
-13. Estadísticas.
+9. Costos.
+10. Ganancias.
+11. Inventario.
+12. Estadísticas. 
