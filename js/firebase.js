@@ -22,13 +22,13 @@
    ========================================================================== */
 
 // 🔧 Reemplaza estos valores por las credenciales de tu proyecto de Firebase.
-const FIREBASE_CONFIG={
-  apiKey:'',
-  authDomain:'',
-  projectId:'',
-  storageBucket:'',
-  messagingSenderId:'',
-  appId:''
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDQwf3sz98SQxg0qUIvL1RBUCMrQajP_9c",
+  authDomain: "zurik-perfumeria.firebaseapp.com",
+  projectId: "zurik-perfumeria",
+  storageBucket: "zurik-perfumeria.firebasestorage.app",
+  messagingSenderId: "462641964308",
+  appId: "1:462641964308:web:94f21d6f2516e0affb4e01"
 };
 
 let firebaseApp=null;
