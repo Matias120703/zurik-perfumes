@@ -85,6 +85,30 @@
       </button>
     </div>
   </div>
+
+  <div class="filters-bar" id="filtersBar">
+    <div class="filter-field">
+      <label for="filterCat">Categoría</label>
+      <select class="filter-select" id="filterCat">
+        <option value="">Todas</option>
+        <option value="Masculino">Masculino</option>
+        <option value="Femenino">Femenino</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="filterMin">Precio mínimo</label>
+      <input class="filter-input tabular" id="filterMin" type="number" inputmode="numeric" min="0" step="1000" placeholder="₲ 0">
+    </div>
+    <div class="filter-field">
+      <label for="filterMax">Precio máximo</label>
+      <input class="filter-input tabular" id="filterMax" type="number" inputmode="numeric" min="0" step="1000" placeholder="Sin límite">
+    </div>
+    <button class="filter-reset" id="filterReset" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+      Limpiar filtros
+    </button>
+  </div>
+
   <div class="grid" id="grid"></div>
 
   <section class="wholesale-cta">
@@ -115,14 +139,6 @@
   </div>
   <div class="drawer-body" id="cartBody"></div>
   <div class="drawer-foot">
-    <div id="wholesaleNote" class="wholesale-note">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.4 6.6H21l-5.3 4 2 6.8L12 15.6 6.3 19.4l2-6.8L3 8.6h6.6z" stroke-linejoin="round"/></svg>
-      <div>
-        <strong>¡Calificas para precio MAYORISTA!</strong>
-        <span>Llevás 5 o más perfumes, así que ya accedés al precio mayorista. Unite a nuestro grupo de WhatsApp mayorista para coordinarlo.</span>
-        <a href="#" id="wholesaleLink" target="_blank">Unirme al grupo mayorista →</a>
-      </div>
-    </div>
     <div class="totals">
       <div class="t-line"><span>Subtotal</span><span class="tabular" id="cartSubtotal">₲ 0</span></div>
       <div class="t-line"><span>Envío</span><span class="tabular" id="cartShip">₲ 0</span></div>
@@ -174,15 +190,15 @@
         <input class="input" id="cAddr" autocomplete="street-address" placeholder="Calle, número, barrio, ciudad">
       </div>
       <div class="field">
-        <label for="cMaps">Ubicación exacta de Google Maps</label>
+        <label>Ubicación exacta (opcional)</label>
         <div class="maps-row">
-          <input class="input" id="cMaps" inputmode="url" placeholder="Pega aquí tu enlace de Google Maps">
-          <a class="btn btn-ghost maps-btn" id="getMapsLink" href="https://www.google.com/maps" target="_blank">
+          <button type="button" class="btn btn-ghost maps-btn" id="shareLocationBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-6.4-7-11a7 7 0 0 1 14 0c0 4.6-7 11-7 11z" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.4"/></svg>
-            Abrir mapa
-          </a>
+            Compartir mi ubicación
+          </button>
+          <span class="hint" id="locationStatus"></span>
         </div>
-        <span class="hint">Abre Google Maps, busca tu casa, toca “Compartir” y pega aquí el enlace. Opcional pero recomendado.</span>
+        <span class="hint">Usamos tu GPS para ubicarte con precisión y coordinar la entrega. Si prefieres no compartirla, llegaremos igual con tu dirección.</span>
       </div>
 
       <div class="order-summary" id="orderSummary"></div>

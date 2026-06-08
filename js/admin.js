@@ -75,8 +75,8 @@ function openModal(id){
     t.textContent='Editar perfume';
     document.getElementById('fHouse').value=p.house||'';
     document.getElementById('fName').value=p.name||'';
-    document.getElementById('fPrice').value=p.price||'';
-    document.getElementById('fCat').value=p.cat||'Unisex';
+    document.getElementById('fPrice').value=p.price?fmt(p.price):'';
+    document.getElementById('fCat').value=p.cat||'Masculino';
     document.getElementById('fNotes').value=p.notes||'';
     document.getElementById('fBadge').value=p.badge||'';
     tempImg=p.img||'';
@@ -139,6 +139,15 @@ document.getElementById('fImg').addEventListener('change',e=>{
     img.src=ev.target.result;
   };
   reader.readAsDataURL(f);
+});
+
+/* ---------- Formato automático del precio (100000 → 100.000) ----------
+   Mientras se escribe se reformatea con separador de miles (es-PY); al
+   guardar, saveProduct() vuelve a extraer solo los dígitos y lo convierte
+   a número plano para Firestore. */
+document.getElementById('fPrice').addEventListener('input',e=>{
+  const digits=e.target.value.replace(/\D/g,'');
+  e.target.value=digits?fmt(parseInt(digits,10)):'';
 });
 
 /* ==========================================================================

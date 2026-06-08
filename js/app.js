@@ -11,26 +11,43 @@
        vivo con Firestore.
    ========================================================================== */
 
-/* Costo de envío, umbral para el aviso de precio mayorista y enlace por
-   defecto del grupo de WhatsApp mayorista (se puede sobrescribir desde el
-   panel admin → se guarda en state.group). */
+/* Costo de envío y enlace por defecto del grupo de WhatsApp mayorista
+   (se puede sobrescribir desde el panel admin → se guarda en state.group). */
 const SHIPPING=30000;
-const WHOLESALE_MIN=5;
+
+/* Ubicación GPS compartida desde el checkout (ver "Compartir mi ubicación"
+   más abajo) — null hasta que el cliente la comparte; la dirección sigue
+   siendo el dato de respaldo y el único campo obligatorio. */
+let sharedLocation=null;
 const WHOLESALE_GROUP='https://chat.whatsapp.com/'; // ← Se usa si en el panel admin no se configuró un enlace propio.
 
 /* ==========================================================================
    CATÁLOGO (grilla + búsqueda)
    ========================================================================== */
 let searchTerm='';
+let filterCat='';
+let filterMin=null;
+let filterMax=null;
+
+/* Un perfume pasa si coincide con la búsqueda libre (nombre, marca,
+   categoría o notas) Y respeta la categoría y el rango de precio elegidos
+   en la barra de filtros. Todos los filtros se combinan (AND) y se evalúan
+   en cada render, así la grilla se actualiza sola apenas cambia algo. */
+function matchesFilters(p,q){
+  if(q&&![p.name,p.house,p.cat,p.notes].some(f=>(f||'').toLowerCase().includes(q)))return false;
+  if(filterCat&&p.cat!==filterCat)return false;
+  if(filterMin!=null&&p.price<filterMin)return false;
+  if(filterMax!=null&&p.price>filterMax)return false;
+  return true;
+}
+
 function renderGrid(){
   const g=document.getElementById('grid');g.innerHTML='';
   const q=searchTerm.trim().toLowerCase();
-  const list=state.products.filter(p=>{
-    if(!q)return true;
-    return [p.name,p.house,p.cat,p.notes].some(f=>(f||'').toLowerCase().includes(q));
-  });
+  const hasFilters=q||filterCat||filterMin!=null||filterMax!=null;
+  const list=state.products.filter(p=>matchesFilters(p,q));
   if(!list.length){
-    const txt=q?'No encontramos perfumes para “'+escapeHtml(searchTerm.trim())+'”.':'Aún no hay perfumes disponibles.';
+    const txt=hasFilters?'No encontramos perfumes con esos filtros.':'Aún no hay perfumes disponibles.';
     g.innerHTML='<div class="empty-cat">'+PERFUME_SVG+'<p>'+txt+'</p></div>';
     return;
   }
@@ -112,9 +129,6 @@ function renderCart(){
   document.getElementById('cartShip').textContent='₲ '+fmt(ship);
   document.getElementById('cartTotal').textContent='₲ '+fmt(sub+ship);
   document.getElementById('checkoutBtn').disabled=!items.length;
-  // Aviso mayorista (solo informativo, no aplica descuento en la web)
-  const note=document.getElementById('wholesaleNote');
-  if(cartQty()>=WHOLESALE_MIN){note.classList.add('show')}else{note.classList.remove('show')}
 }
 function openCart(){document.getElementById('drawer').classList.add('open');document.getElementById('scrim').classList.add('open');document.body.classList.add('no-scroll')}
 function closeCart(){document.getElementById('drawer').classList.remove('open');document.getElementById('scrim').classList.remove('open');document.body.classList.remove('no-scroll')}
@@ -140,7 +154,7 @@ function renderOrderSummary(){
 
 /* ---------- Enviar pedido → WhatsApp ---------- */
 function sendOrder(){
-  const name=val('cName'),last=val('cLast'),ci=val('cCi'),phone=val('cPhone'),addr=val('cAddr'),maps=val('cMaps');
+  const name=val('cName'),last=val('cLast'),ci=val('cCi'),phone=val('cPhone'),addr=val('cAddr');
   if(!name||!last||!ci||!phone||!addr){
     document.getElementById('checkoutErr').classList.add('show');return;
   }
@@ -159,11 +173,47 @@ function sendOrder(){
   msg+='Cédula: '+ci+'\n';
   msg+='Teléfono: '+phone+'\n';
   msg+='Dirección: '+addr+'\n';
-  if(maps)msg+='Ubicación: '+maps+'\n';
+  if(sharedLocation){
+    const lat=sharedLocation.lat.toFixed(6),lng=sharedLocation.lng.toFixed(6);
+    msg+='Ubicación GPS: '+lat+', '+lng+' → https://www.google.com/maps?q='+lat+','+lng+'\n';
+  }
   const num=(state.wa||'').replace(/\D/g,'');
   window.open('https://wa.me/'+num+'?text='+encodeURIComponent(msg),'_blank');
 }
 function val(id){return document.getElementById(id).value.trim()}
+
+/* ---------- Compartir ubicación (geolocalización automática) ----------
+   Reemplaza el antiguo campo de enlace de Google Maps: el cliente comparte
+   su posición GPS con un toque y enviamos lat/lng exactas por WhatsApp.
+   La dirección sigue siendo el dato de respaldo y el único obligatorio. */
+(function(){
+  const btn=document.getElementById('shareLocationBtn');
+  const status=document.getElementById('locationStatus');
+  if(!btn||!status)return;
+  btn.onclick=()=>{
+    if(!navigator.geolocation){
+      sharedLocation=null;
+      status.textContent='Tu navegador no permite compartir ubicación.';
+      status.className='hint err';
+      return;
+    }
+    status.textContent='Obteniendo tu ubicación…';
+    status.className='hint';
+    navigator.geolocation.getCurrentPosition(
+      pos=>{
+        sharedLocation={lat:pos.coords.latitude,lng:pos.coords.longitude};
+        status.textContent='✓ Ubicación compartida';
+        status.className='hint ok';
+      },
+      ()=>{
+        sharedLocation=null;
+        status.textContent='No se pudo obtener tu ubicación. Continuaremos con tu dirección.';
+        status.className='hint err';
+      },
+      {enableHighAccuracy:true,timeout:10000}
+    );
+  };
+})();
 
 /* ==========================================================================
    SPLASH (pantalla de bienvenida)
@@ -205,7 +255,6 @@ document.getElementById('checkoutClose').onclick=closeCheckout;
 document.getElementById('checkoutBack').onclick=closeCheckout;
 document.getElementById('sendOrder').onclick=sendOrder;
 document.getElementById('checkoutScrim').onclick=e=>{if(e.target.id==='checkoutScrim')closeCheckout()};
-document.getElementById('wholesaleLink').onclick=e=>{e.preventDefault();window.open(state.group||WHOLESALE_GROUP,'_blank')};
 document.getElementById('wholesaleCtaBtn').onclick=()=>window.open(state.group||WHOLESALE_GROUP,'_blank');
 
 (function(){
@@ -217,6 +266,30 @@ document.getElementById('wholesaleCtaBtn').onclick=()=>window.open(state.group||
     renderGrid();
   });
   sc.onclick=()=>{si.value='';searchTerm='';sc.style.display='none';renderGrid();si.focus();};
+})();
+
+/* ==========================================================================
+   FILTROS (categoría + rango de precio)
+   --------------------------------------------------------------------------
+   Se combinan con la búsqueda libre y se aplican al instante: cada cambio
+   actualiza las variables de filtro y vuelve a dibujar la grilla, sin
+   recargar la página. */
+(function(){
+  const si=document.getElementById('searchInput');
+  const sc=document.getElementById('searchClear');
+  const fc=document.getElementById('filterCat');
+  const fmin=document.getElementById('filterMin');
+  const fmax=document.getElementById('filterMax');
+  fc.addEventListener('change',()=>{filterCat=fc.value;renderGrid();});
+  fmin.addEventListener('input',()=>{filterMin=fmin.value!==''?parseInt(fmin.value,10):null;renderGrid();});
+  fmax.addEventListener('input',()=>{filterMax=fmax.value!==''?parseInt(fmax.value,10):null;renderGrid();});
+  document.getElementById('filterReset').onclick=()=>{
+    si.value='';searchTerm='';sc.style.display='none';
+    fc.value='';filterCat='';
+    fmin.value='';filterMin=null;
+    fmax.value='';filterMax=null;
+    renderGrid();
+  };
 })();
 
 document.getElementById('brandHome').onclick=e=>{e.preventDefault();window.scrollTo({top:0,behavior:'smooth'})};
