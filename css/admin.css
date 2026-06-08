@@ -1,0 +1,66 @@
+/* ==========================================================================
+   ZURIK · Panel de Administración — estilos exclusivos
+   --------------------------------------------------------------------------
+   Este archivo se carga junto a css/style.css (que aporta variables, base,
+   botones, campos y modales compartidos). Aquí solo van los estilos propios
+   de admin.html: pantalla de login, panel/dashboard y tabla de inventario.
+   ========================================================================== */
+
+/* ---------- Login ---------- */
+.login-box{max-width:380px;margin:80px auto;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r);padding:36px 32px;text-align:center}
+.login-box .lk{font-family:var(--display);font-size:30px;letter-spacing:.28em;
+  color:var(--gold);margin-bottom:6px;padding-left:.28em}
+.login-box p{color:var(--text-3);font-size:13px;margin-bottom:26px;letter-spacing:.04em}
+.login-box .field{text-align:left;margin-bottom:18px}
+
+/* ---------- Contenedor del panel ---------- */
+.admin-overlay{position:fixed;inset:0;z-index:250;background:var(--bg);
+  overflow-y:auto;display:none;}
+.admin-overlay.open{display:block}
+.admin-wrap{max-width:1080px;margin:0 auto;padding:28px 24px 80px}
+.admin-top{display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;padding-bottom:24px;border-bottom:1px solid var(--line);margin-bottom:30px}
+.admin-top h2{font-family:var(--display);font-size:34px;font-weight:500;letter-spacing:.02em}
+.admin-top h2 small{display:block;font-family:var(--body);font-size:11px;
+  letter-spacing:.28em;text-transform:uppercase;color:var(--gold);margin-top:4px}
+.admin-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* Tarjetas de configuración (WhatsApp y grupo mayorista) */
+.admin-settings{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:22px 24px;margin-bottom:28px;display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap}
+
+/* ---------- Tabla de inventario ---------- */
+.admin-table{width:100%;border-collapse:collapse;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.admin-table th{text-align:left;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text-3);font-weight:500;padding:15px 16px;border-bottom:1px solid var(--line);background:var(--bg-2)}
+.admin-table td{padding:14px 16px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:middle}
+.admin-table tr:last-child td{border-bottom:none}
+.admin-table .tprod{display:flex;align-items:center;gap:12px}
+.admin-table .tthumb{width:42px;height:54px;border-radius:7px;object-fit:cover;background:var(--bg-2);flex-shrink:0}
+.admin-table .tthumb.ph{display:grid;place-items:center}
+.admin-table .tthumb.ph svg{width:18px;height:18px;color:var(--gold-deep);opacity:.5}
+.admin-table .tname{font-family:var(--display);font-size:18px;font-weight:500}
+.admin-table .thouse{font-size:11px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase}
+.row-actions{display:flex;gap:6px;justify-content:flex-end}
+.mini-btn{width:40px;height:40px;border-radius:9px;display:grid;place-items:center;
+  border:1px solid var(--line);color:var(--text-2);transition:all .2s}
+.mini-btn:hover{border-color:var(--gold-deep);color:var(--gold-bright)}
+.mini-btn.del:hover{border-color:var(--danger);color:var(--danger)}
+.mini-btn svg{width:17px;height:17px}
+.admin-empty{text-align:center;padding:70px 20px;color:var(--text-3)}
+.admin-empty svg{width:56px;height:56px;margin:0 auto 18px;opacity:.4;color:var(--gold-deep)}
+
+/* Enlace discreto hacia el panel (estilo reservado para un acceso visible en el futuro) */
+.admin-link{margin-top:18px;font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+
+/* ---------- Responsive (móvil): tabla en formato de tarjetas ---------- */
+@media(max-width:620px){
+  .admin-table .tprod .meta{display:none}
+  .admin-table thead{display:none}
+  .admin-table,.admin-table tbody,.admin-table tr,.admin-table td{display:block;width:100%}
+  .admin-table tr{border-bottom:1px solid var(--line);padding:6px 0}
+  .admin-table td{border:none;padding:8px 16px}
+  .row-actions{justify-content:flex-start;padding-bottom:14px}
+}

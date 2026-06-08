@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZURIK · Panel de Administración</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<div class="atmosphere"></div>
+<div class="grain"></div>
+
+<!-- ============ PANEL DE ADMINISTRACIÓN ============
+     Página independiente: antes vivía como overlay dentro de index.html y
+     se abría escribiendo "#admin" en la URL. Ahora es su propia página
+     (admin.html), por lo que ese atajo simplemente redirige hacia aquí
+     (ver checkAdminHash en js/app.js). La clase "open" queda fija porque
+     en esta página el panel siempre debe verse al cargar. -->
+<div class="admin-overlay open" id="adminOverlay">
+  <div class="admin-wrap">
+    <!-- Login -->
+    <div id="loginView">
+      <div class="login-box">
+        <div class="lk">ZURIK</div>
+        <p>PANEL DE ADMINISTRACIÓN</p>
+        <div class="field">
+          <label for="pwInput">Contraseña</label>
+          <input class="input" type="password" id="pwInput" autocomplete="current-password" placeholder="••••••••">
+          <span class="err" id="pwErr">Contraseña incorrecta.</span>
+        </div>
+        <button class="btn btn-primary" id="loginBtn" style="width:100%;justify-content:center">Ingresar</button>
+        <button class="btn btn-ghost" id="loginCancel" style="width:100%;justify-content:center;margin-top:10px">Volver a la tienda</button>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashView" style="display:none">
+      <div class="admin-top">
+        <h2>Inventario<small>Zurik · Administración</small></h2>
+        <div class="admin-actions">
+          <button class="btn btn-ghost" id="backStore">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Ver tienda
+          </button>
+          <button class="btn btn-primary" id="newProdBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+            Nuevo perfume
+          </button>
+        </div>
+      </div>
+
+      <div class="admin-settings">
+        <div class="field">
+          <label for="waNumber">Número de WhatsApp para pedidos</label>
+          <input class="input tabular" id="waNumber" inputmode="tel" placeholder="595984158986">
+          <span class="hint">Con código de país, sin + ni espacios. Ej: 595984158986</span>
+        </div>
+        <button class="btn btn-primary" id="saveWa">Guardar número</button>
+      </div>
+
+      <div class="admin-settings">
+        <div class="field">
+          <label for="waGroup">Enlace del grupo mayorista de WhatsApp</label>
+          <input class="input" id="waGroup" inputmode="url" placeholder="https://chat.whatsapp.com/XXXXXXXX">
+          <span class="hint">Se muestra a quien lleve 5 o más perfumes en el carrito.</span>
+        </div>
+        <button class="btn btn-primary" id="saveGroup">Guardar grupo</button>
+      </div>
+
+      <div id="adminList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL DE PRODUCTO ============ -->
+<div class="modal-scrim" id="modalScrim">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">Nuevo perfume</h3>
+      <button class="icon-btn" id="modalClose" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-form">
+      <div class="form-row" style="align-items:flex-start">
+        <img class="img-preview ph" id="imgPreview" alt="Vista previa">
+        <div class="field" style="flex:1">
+          <label for="fImg">Foto del perfume</label>
+          <input class="input" type="file" id="fImg" accept="image/*">
+          <span class="hint">Opcional. Se guarda en este navegador.</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="fHouse">Marca / Casa</label>
+          <input class="input" id="fHouse" placeholder="Ej: Maison Zurik">
+        </div>
+        <div class="field">
+          <label for="fName">Nombre del perfume *</label>
+          <input class="input" id="fName" placeholder="Ej: Noir Absolu">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="fPrice">Precio (₲) *</label>
+          <input class="input tabular" id="fPrice" inputmode="numeric" placeholder="350000">
+        </div>
+        <div class="field">
+          <label for="fCat">Categoría</label>
+          <select class="input" id="fCat">
+            <option value="Femenino">Femenino</option>
+            <option value="Masculino">Masculino</option>
+            <option value="Unisex">Unisex</option>
+            <option value="Árabe">Árabe</option>
+            <option value="Nicho">Nicho</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="fNotes">Notas / Descripción</label>
+        <textarea class="input" id="fNotes" placeholder="Ej: Vainilla, oud y ámbar. Estela intensa."></textarea>
+      </div>
+      <div class="field">
+        <label for="fBadge">Etiqueta destacada</label>
+        <input class="input" id="fBadge" placeholder="Ej: Nuevo, Más vendido (opcional)">
+      </div>
+      <span class="err" id="formErr">Completa el nombre y un precio válido.</span>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="modalCancel">Cancelar</button>
+      <button class="btn btn-primary" id="modalSave">Guardar perfume</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TOAST ============ -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span id="toastMsg">Añadido</span>
+</div>
+
+<!-- ============ SCRIPTS ============
+     Mismo orden que en index.html: firebase.js y catalogo.js primero
+     (datos y utilidades compartidas), admin.js al final. -->
+<script src="js/firebase.js"></script>
+<script src="js/catalogo.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
