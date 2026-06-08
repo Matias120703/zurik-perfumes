@@ -21,8 +21,10 @@
 
    Estructura en Firestore:
      · Colección "perfumes" — un documento por perfume con los campos
-       nombre, marca, precio, categoria, imagen, descripcion (y "etiqueta"
-       para la insignia opcional tipo "Nuevo" / "Más vendido").
+       nombre, marca, precio, categoria, imagen, descripcion, etiqueta
+       (insignia opcional tipo "Nuevo" / "Más vendido") y los campos de la
+       página de detalle: notasSalida, notasCorazon, notasFondo, duracion
+       y proyeccion.
      · Colección "ajustes" → documento "general" con los campos
        wa (número de WhatsApp) y group (enlace del grupo mayorista).
 
@@ -92,7 +94,12 @@ function perfumeFromDoc(doc){
     cat:d.categoria||'',
     notes:d.descripcion||'',
     img:d.imagen||'',
-    badge:d.etiqueta||''
+    badge:d.etiqueta||'',
+    topNotes:d.notasSalida||'',
+    heartNotes:d.notasCorazon||'',
+    baseNotes:d.notasFondo||'',
+    duration:d.duracion||'',
+    projection:d.proyeccion||''
   };
 }
 function perfumeToDoc(p){
@@ -103,7 +110,12 @@ function perfumeToDoc(p){
     categoria:p.cat||'',
     descripcion:p.notes||'',
     imagen:p.img||'',
-    etiqueta:p.badge||''
+    etiqueta:p.badge||'',
+    notasSalida:p.topNotes||'',
+    notasCorazon:p.heartNotes||'',
+    notasFondo:p.baseNotes||'',
+    duracion:p.duration||'',
+    proyeccion:p.projection||''
   };
 }
 

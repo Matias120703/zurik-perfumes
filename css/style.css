@@ -152,7 +152,7 @@ header{position:sticky;top:0;z-index:100;backdrop-filter:blur(14px);
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:24px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
   overflow:hidden;transition:transform .35s cubic-bezier(.2,.7,.2,1),border-color .35s,box-shadow .35s;
-  display:flex;flex-direction:column;position:relative;}
+  display:flex;flex-direction:column;position:relative;cursor:pointer;}
 .card:hover{transform:translateY(-6px);border-color:var(--gold-deep);box-shadow:var(--shadow)}
 .card-media{aspect-ratio:4/5;position:relative;overflow:hidden;background:var(--bg-2)}
 .card-media img{width:100%;height:100%;object-fit:cover;transition:transform .6s ease}
@@ -252,6 +252,8 @@ footer a:hover{color:var(--gold-bright)}
 .btn-danger{border:1px solid var(--danger);color:var(--danger)}
 .btn-danger:hover{background:var(--danger);color:#fff}
 
+.field-group-label{font-family:var(--display);font-size:15px;color:var(--gold);
+  border-top:1px solid var(--line);padding-top:18px;margin-top:2px}
 .field{display:flex;flex-direction:column;gap:7px;flex:1;min-width:200px}
 .field label{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-2)}
 .field .hint{font-size:11px;color:var(--text-3);letter-spacing:.02em;text-transform:none}
@@ -301,6 +303,44 @@ textarea.input{min-height:80px;resize:vertical;line-height:1.5}
   font-family:var(--display);font-size:22px;color:var(--gold-bright);font-weight:600}
 .order-summary .os-line.os-total span:first-child{font-family:var(--body);font-size:12px;
   letter-spacing:.16em;text-transform:uppercase;color:var(--text-2);align-self:center}
+
+/* ---------- Modal de detalle de perfume ---------- */
+.detail-modal{width:min(900px,100%);overflow:hidden;position:relative;animation:popin .3s ease}
+.detail-close{position:absolute;top:16px;right:16px;z-index:3;
+  background:rgba(14,12,10,.55);backdrop-filter:blur(6px)}
+.detail-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}
+.detail-media{position:relative;aspect-ratio:4/5;overflow:hidden;background:var(--bg-2)}
+.detail-media img{width:100%;height:100%;object-fit:cover;display:block}
+.detail-media .ph{width:100%;height:100%;display:grid;place-items:center;
+  background:linear-gradient(150deg,var(--surface-2),var(--bg-2))}
+.detail-media .ph svg{width:84px;height:84px;color:var(--gold-deep);opacity:.4}
+.detail-body{padding:34px 32px;display:flex;flex-direction:column;gap:13px;
+  overflow-y:auto;max-height:min(680px,86vh)}
+.detail-body .house{font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold)}
+.detail-body h3{font-family:var(--display);font-size:32px;font-weight:500;line-height:1.12}
+.detail-meta{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.detail-meta .price{font-size:25px}
+.cat-pill{border:1px solid var(--gold-deep);color:var(--gold-bright);font-size:10px;
+  letter-spacing:.16em;text-transform:uppercase;padding:6px 14px;border-radius:20px}
+.detail-desc{color:var(--text-2);font-size:14.5px;line-height:1.7}
+.pyramid{display:flex;flex-direction:column;gap:9px;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:16px 0}
+.pyr-row{display:flex;gap:14px;align-items:baseline}
+.pyr-row .pyr-lbl{flex-shrink:0;width:112px;font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--gold)}
+.pyr-row .pyr-val{color:var(--text-2);font-size:13.5px;line-height:1.6}
+.traits{display:flex;gap:30px;flex-wrap:wrap}
+.trait{display:flex;flex-direction:column;gap:3px}
+.trait .trait-lbl{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-3)}
+.trait .trait-val{font-family:var(--display);font-size:18px;color:var(--gold-bright)}
+.detail-add{align-self:flex-start;display:flex;align-items:center;gap:8px;margin-top:6px}
+.detail-add svg{width:17px;height:17px}
+@media(max-width:760px){
+  .detail-grid{grid-template-columns:1fr}
+  .detail-media{aspect-ratio:1/1}
+  .detail-body{max-height:none;padding:26px 22px}
+  .detail-body h3{font-size:26px}
+}
 
 /* ---------- Pantalla de bienvenida (splash) ---------- */
 .splash{position:fixed;inset:0;z-index:500;background:radial-gradient(900px 600px at 50% 40%,#1a1510,#0a0807 70%);

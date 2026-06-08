@@ -52,7 +52,7 @@ function renderGrid(){
     return;
   }
   list.forEach(p=>{
-    const card=document.createElement('article');card.className='card';
+    const card=document.createElement('article');card.className='card';card.dataset.id=p.id;
     const media=p.img
       ?'<div class="card-media"><img src="'+p.img+'" alt="'+escapeHtml(p.name)+'"></div>'
       :'<div class="card-media"><div class="ph">'+PERFUME_SVG+'</div></div>';
@@ -71,7 +71,60 @@ function renderGrid(){
       '</div>';
     g.appendChild(card);
   });
-  g.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>addToCart(b.dataset.add));
+  g.querySelectorAll('[data-add]').forEach(b=>b.onclick=e=>{e.stopPropagation();addToCart(b.dataset.add)});
+  g.querySelectorAll('.card').forEach(c=>c.onclick=()=>openDetail(c.dataset.id));
+}
+
+/* ==========================================================================
+   PÁGINA DE DETALLE DEL PERFUME (modal)
+   --------------------------------------------------------------------------
+   Se abre al tocar una tarjeta del catálogo y muestra la ficha completa:
+   imagen grande, descripción y la pirámide olfativa (notas de salida,
+   corazón y fondo, duración y proyección) cargadas desde Firestore. Como
+   el catálogo llega en vivo, si el perfume abierto cambia (o se elimina)
+   desde otro dispositivo, la ficha se actualiza o se cierra sola. */
+let detailId=null;
+function renderDetail(p){
+  const media=p.img
+    ?'<img src="'+p.img+'" alt="'+escapeHtml(p.name)+'">'
+    :'<div class="ph">'+PERFUME_SVG+'</div>';
+  document.getElementById('detailMedia').innerHTML=media+(p.badge?'<span class="badge">'+escapeHtml(p.badge)+'</span>':'');
+
+  const houseEl=document.getElementById('detailHouse');
+  houseEl.textContent=p.house||'';houseEl.style.display=p.house?'':'none';
+  document.getElementById('detailName').textContent=p.name||'';
+  document.getElementById('detailPrice').innerHTML='<span class="cur">₲</span>'+fmt(p.price);
+
+  const catEl=document.getElementById('detailCat');
+  catEl.textContent=p.cat||'';catEl.style.display=p.cat?'':'none';
+
+  const descEl=document.getElementById('detailDesc');
+  descEl.textContent=p.notes||'';descEl.style.display=p.notes?'':'none';
+
+  const pyramid=document.getElementById('detailPyramid');
+  const pyrRows=[['Notas de salida',p.topNotes],['Notas de corazón',p.heartNotes],['Notas de fondo',p.baseNotes]].filter(r=>r[1]);
+  pyramid.innerHTML=pyrRows.map(r=>'<div class="pyr-row"><span class="pyr-lbl">'+r[0]+'</span><span class="pyr-val">'+escapeHtml(r[1])+'</span></div>').join('');
+  pyramid.style.display=pyrRows.length?'':'none';
+
+  const traitsEl=document.getElementById('detailTraits');
+  const traits=[['Duración',p.duration],['Proyección',p.projection]].filter(r=>r[1]);
+  traitsEl.innerHTML=traits.map(r=>'<div class="trait"><span class="trait-lbl">'+r[0]+'</span><span class="trait-val">'+escapeHtml(r[1])+'</span></div>').join('');
+  traitsEl.style.display=traits.length?'':'none';
+
+  document.getElementById('detailAddBtn').onclick=()=>addToCart(p.id);
+}
+function openDetail(id){
+  const p=state.products.find(x=>x.id===id);if(!p)return;
+  detailId=id;
+  renderDetail(p);
+  document.getElementById('detailScrim').classList.add('open');
+  document.body.classList.add('no-scroll');
+}
+function closeDetail(){
+  detailId=null;
+  document.getElementById('detailScrim').classList.remove('open');
+  if(!document.getElementById('drawer').classList.contains('open')&&!document.getElementById('checkoutScrim').classList.contains('open'))
+    document.body.classList.remove('no-scroll');
 }
 
 /* ==========================================================================
@@ -255,6 +308,8 @@ document.getElementById('checkoutClose').onclick=closeCheckout;
 document.getElementById('checkoutBack').onclick=closeCheckout;
 document.getElementById('sendOrder').onclick=sendOrder;
 document.getElementById('checkoutScrim').onclick=e=>{if(e.target.id==='checkoutScrim')closeCheckout()};
+document.getElementById('detailClose').onclick=closeDetail;
+document.getElementById('detailScrim').onclick=e=>{if(e.target.id==='detailScrim')closeDetail()};
 document.getElementById('wholesaleCtaBtn').onclick=()=>window.open(state.group||WHOLESALE_GROUP,'_blank');
 
 (function(){
@@ -293,7 +348,7 @@ document.getElementById('wholesaleCtaBtn').onclick=()=>window.open(state.group||
 })();
 
 document.getElementById('brandHome').onclick=e=>{e.preventDefault();window.scrollTo({top:0,behavior:'smooth'})};
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeCart();closeCheckout();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeCart();closeCheckout();closeDetail();}});
 
 /* ==========================================================================
    INICIO
@@ -303,7 +358,13 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeCart();closeCh
    grilla y el carrito se redibujan solos apenas cambia algo, ya sea desde
    el panel admin o desde otro dispositivo. */
 loadCart();renderCart();checkAdminHash();
-watchPerfumes(list=>{state.products=list;renderGrid();renderCart();});
+watchPerfumes(list=>{
+  state.products=list;renderGrid();renderCart();
+  if(detailId){
+    const p=state.products.find(x=>x.id===detailId);
+    if(p)renderDetail(p);else closeDetail();
+  }
+});
 watchSettings(s=>{
   if(!s)return;
   if(s.wa)state.wa=s.wa;

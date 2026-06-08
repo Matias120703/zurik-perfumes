@@ -78,12 +78,17 @@ function openModal(id){
     document.getElementById('fPrice').value=p.price?fmt(p.price):'';
     document.getElementById('fCat').value=p.cat||'Masculino';
     document.getElementById('fNotes').value=p.notes||'';
+    document.getElementById('fTopNotes').value=p.topNotes||'';
+    document.getElementById('fHeartNotes').value=p.heartNotes||'';
+    document.getElementById('fBaseNotes').value=p.baseNotes||'';
+    document.getElementById('fDuration').value=p.duration||'';
+    document.getElementById('fProjection').value=p.projection||'';
     document.getElementById('fBadge').value=p.badge||'';
     tempImg=p.img||'';
     setPreview(tempImg);
   }else{
     t.textContent='Nuevo perfume';
-    ['fHouse','fName','fPrice','fNotes','fBadge'].forEach(i=>document.getElementById(i).value='');
+    ['fHouse','fName','fPrice','fNotes','fTopNotes','fHeartNotes','fBaseNotes','fDuration','fProjection','fBadge'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('fCat').value='Femenino';
     setPreview('');
   }
@@ -105,6 +110,11 @@ function saveProduct(){
     name,price,
     cat:document.getElementById('fCat').value,
     notes:document.getElementById('fNotes').value.trim(),
+    topNotes:document.getElementById('fTopNotes').value.trim(),
+    heartNotes:document.getElementById('fHeartNotes').value.trim(),
+    baseNotes:document.getElementById('fBaseNotes').value.trim(),
+    duration:document.getElementById('fDuration').value.trim(),
+    projection:document.getElementById('fProjection').value.trim(),
     badge:document.getElementById('fBadge').value.trim(),
     img:tempImg
   };

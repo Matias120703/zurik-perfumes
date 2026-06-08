@@ -59,3 +59,31 @@ Construir una plantilla premium para perfumerías que luego será reutilizada pa
     - Obtener latitud y longitud.
     - Enviar ubicación exacta en el mensaje de WhatsApp.
     - Mantener campo dirección como respaldo.
+
+    ## Completado
+
+- Firebase conectado.
+- Firestore funcionando.
+- Admin conectado.
+- Búsqueda.
+- Filtros.
+- Categorías Masculino/Femenino.
+- Formato automático de precios.
+- Compartir ubicación automática.
+- Carrito conectado a WhatsApp.
+- Página individual de perfume (modal de detalle desde el catálogo).
+- Notas de salida, corazón y fondo (editables en admin, visibles en la ficha).
+- Duración y proyección (editables en admin, visibles en la ficha).
+
+## Próxima prioridad
+
+1. Calificaciones.
+2. Comentarios.
+
+## Fase 2 - Administración
+
+9. Dashboard financiero.
+10. Costos.
+11. Ganancias.
+12. Inventario.
+13. Estadísticas.
