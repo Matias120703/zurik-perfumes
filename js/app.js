@@ -3,9 +3,12 @@
    --------------------------------------------------------------------------
    Maneja todo lo que ve el cliente: splash de bienvenida, grilla de
    perfumes con búsqueda, carrito de compras, checkout (datos de envío) y
-   el envío del pedido por WhatsApp. Depende de js/catalogo.js, que debe
-   cargarse antes que este archivo (expone PERFUME_SVG, state, load, save,
-   gid, fmt, escapeHtml y showToast).
+   el envío del pedido por WhatsApp. Depende de:
+     · js/catalogo.js → PERFUME_SVG, state, loadCart/saveCart, fmt,
+       escapeHtml, showToast.
+     · js/firebase.js → watchPerfumes/watchSettings, que mantienen el
+       catálogo y los ajustes (WhatsApp, grupo mayorista) sincronizados en
+       vivo con Firestore.
    ========================================================================== */
 
 /* Costo de envío, umbral para el aviso de precio mayorista y enlace por
@@ -58,7 +61,7 @@ function renderGrid(){
    CARRITO
    ========================================================================== */
 function addToCart(id){
-  state.cart[id]=(state.cart[id]||0)+1;save();renderCart();
+  state.cart[id]=(state.cart[id]||0)+1;saveCart();renderCart();
   const p=state.products.find(x=>x.id===id);
   showToast((p?p.name:'Producto')+' añadido');
   pulseCart();
@@ -99,9 +102,9 @@ function renderCart(){
         '</div>';
       body.appendChild(line);
     });
-    body.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>{state.cart[b.dataset.inc]++;save();renderCart()});
-    body.querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>{const id=b.dataset.dec;state.cart[id]--;if(state.cart[id]<=0)delete state.cart[id];save();renderCart()});
-    body.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{delete state.cart[b.dataset.rm];save();renderCart()});
+    body.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>{state.cart[b.dataset.inc]++;saveCart();renderCart()});
+    body.querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>{const id=b.dataset.dec;state.cart[id]--;if(state.cart[id]<=0)delete state.cart[id];saveCart();renderCart()});
+    body.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{delete state.cart[b.dataset.rm];saveCart();renderCart()});
   }
   const sub=cartTotal();
   const ship=items.length?SHIPPING:0;
@@ -221,5 +224,15 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeCart();closeCh
 
 /* ==========================================================================
    INICIO
-   ========================================================================== */
-load();renderGrid();renderCart();checkAdminHash();
+   --------------------------------------------------------------------------
+   El carrito vive en este navegador (localStorage). El catálogo y los
+   ajustes (WhatsApp, grupo mayorista) llegan en vivo desde Firestore: la
+   grilla y el carrito se redibujan solos apenas cambia algo, ya sea desde
+   el panel admin o desde otro dispositivo. */
+loadCart();renderCart();checkAdminHash();
+watchPerfumes(list=>{state.products=list;renderGrid();renderCart();});
+watchSettings(s=>{
+  if(!s)return;
+  if(s.wa)state.wa=s.wa;
+  if(typeof s.group!=='undefined')state.group=s.group;
+});

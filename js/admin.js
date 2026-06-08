@@ -4,8 +4,12 @@
    Controla el acceso por contraseña, el listado/edición/borrado de
    perfumes (CRUD), la carga y compresión de fotos, y los ajustes de
    contacto (número de WhatsApp y enlace del grupo mayorista).
-   Depende de js/catalogo.js, que debe cargarse antes que este archivo
-   (expone PERFUME_SVG, state, load, save, gid, fmt, escapeHtml y showToast).
+   Depende de:
+     · js/catalogo.js → PERFUME_SVG, state, fmt, escapeHtml, showToast.
+     · js/firebase.js → watchPerfumes/createPerfume/updatePerfume/
+       deletePerfume/watchSettings/saveSettings: todo el CRUD se hace
+       contra Firestore (colección "perfumes" + ajustes), y la tabla se
+       redibuja sola apenas hay cambios — no se guarda nada localmente.
    ========================================================================== */
 
 // 🔒 Contraseña del panel. Cámbiala por la tuya antes de publicar el sitio.
@@ -19,8 +23,7 @@ function login(){
   if(v===ADMIN_PASSWORD){
     document.getElementById('loginView').style.display='none';
     document.getElementById('dashView').style.display='block';
-    document.getElementById('waNumber').value=state.wa;
-    document.getElementById('waGroup').value=state.group||'';
+    syncSettingsToForm();
     renderAdmin();
   }else{
     document.getElementById('pwErr').classList.add('show');
@@ -52,7 +55,10 @@ function renderAdmin(){
   wrap.innerHTML='<table class="admin-table"><thead><tr><th>Perfume</th><th>Categoría</th><th>Precio</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
   wrap.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openModal(b.dataset.edit));
   wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
-    if(confirm('¿Eliminar este perfume?')){state.products=state.products.filter(x=>x.id!==b.dataset.del);save();renderAdmin();}
+    if(!confirm('¿Eliminar este perfume?'))return;
+    deletePerfume(b.dataset.del)
+      .then(()=>showToast('Perfume eliminado'))
+      .catch(()=>showToast('No se pudo eliminar el perfume'));
   });
 }
 
@@ -102,20 +108,21 @@ function saveProduct(){
     badge:document.getElementById('fBadge').value.trim(),
     img:tempImg
   };
-  if(editingId){
-    const p=state.products.find(x=>x.id===editingId);Object.assign(p,data);
-  }else{
-    state.products.unshift({id:gid(),...data});
-  }
-  save();closeModal();renderAdmin();
-  showToast('Perfume guardado');
+  const action=editingId?updatePerfume(editingId,data):createPerfume(data);
+  action.then(()=>{
+    closeModal();
+    showToast('Perfume guardado');
+  }).catch(()=>{
+    showToast('No se pudo guardar el perfume en Firestore');
+  });
 }
 
 /* ---------- Carga de imagen (con compresión a JPEG) ----------
    La foto se redimensiona en un <canvas> a un máximo de 700px de lado y se
-   guarda como dataURL JPEG dentro del propio producto (state.products[].img),
-   tal como antes: queda persistida en este navegador junto al resto del
-   catálogo (localStorage), sin depender de un servidor de archivos. */
+   guarda como dataURL JPEG dentro del propio documento de Firestore (campo
+   "imagen"), sin depender de un servidor de archivos ni de Storage. La
+   compresión mantiene el dataURL liviano (muy por debajo del límite de 1MB
+   por documento de Firestore). */
 document.getElementById('fImg').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;
   const reader=new FileReader();
@@ -138,10 +145,16 @@ document.getElementById('fImg').addEventListener('change',e=>{
    AJUSTES (WhatsApp y grupo mayorista)
    ========================================================================== */
 document.getElementById('saveWa').onclick=()=>{
-  state.wa=document.getElementById('waNumber').value.replace(/\D/g,'');save();showToast('Número guardado');
+  const wa=document.getElementById('waNumber').value.replace(/\D/g,'');
+  saveSettings({wa})
+    .then(()=>showToast('Número guardado'))
+    .catch(()=>showToast('No se pudo guardar el número'));
 };
 document.getElementById('saveGroup').onclick=()=>{
-  state.group=document.getElementById('waGroup').value.trim();save();showToast('Grupo guardado');
+  const group=document.getElementById('waGroup').value.trim();
+  saveSettings({group})
+    .then(()=>showToast('Grupo guardado'))
+    .catch(()=>showToast('No se pudo guardar el grupo'));
 };
 
 /* ==========================================================================
@@ -160,8 +173,23 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 
 /* ==========================================================================
    INICIO
-   ========================================================================== */
-load();
+   --------------------------------------------------------------------------
+   El inventario y los ajustes llegan en vivo desde Firestore: apenas se
+   conecta (y cada vez que cambian, incluso desde otro dispositivo) se
+   refresca la tabla y, si el panel ya está abierto, también el formulario
+   de ajustes. */
+function syncSettingsToForm(){
+  document.getElementById('waNumber').value=state.wa||'';
+  document.getElementById('waGroup').value=state.group||'';
+}
+watchPerfumes(list=>{state.products=list;renderAdmin();});
+watchSettings(s=>{
+  if(!s)return;
+  if(s.wa)state.wa=s.wa;
+  if(typeof s.group!=='undefined')state.group=s.group;
+  if(document.getElementById('dashView').style.display!=='none')syncSettingsToForm();
+});
+
 document.getElementById('pwInput').value='';
 document.getElementById('pwErr').classList.remove('show');
 setTimeout(()=>document.getElementById('pwInput').focus(),100);

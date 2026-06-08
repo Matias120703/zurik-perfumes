@@ -20,7 +20,7 @@ build ni dependencias) listo para desplegar en Vercel.
 │   ├── app.js              # Lógica de la tienda: catálogo, carrito, checkout, splash
 │   ├── catalogo.js         # Datos y utilidades compartidas (productos, estado, formato, toast)
 │   ├── admin.js            # Lógica del panel: login, alta/edición/borrado de perfumes, ajustes
-│   └── firebase.js         # Conexión a Firebase Firestore (preparada, lista para activarse)
+│   └── firebase.js         # Conexión a Firebase Firestore: punto central de lectura/escritura
 │
 ├── assets/
 │   ├── logos/              # Logo de Zurik (splash y marca del header)
@@ -32,10 +32,15 @@ build ni dependencias) listo para desplegar en Vercel.
 
 ## Cómo funciona
 
-- **Catálogo y carrito**: los perfumes, el carrito, el número de WhatsApp y el
-  enlace del grupo mayorista se guardan en `localStorage` (clave `zurikStore`),
-  por lo que cada navegador conserva su propia copia. La carga inicial usa los
-  perfumes de ejemplo definidos en `SEED` (`js/catalogo.js`).
+- **Catálogo y ajustes en Firestore**: los perfumes (colección `perfumes`) y
+  los ajustes de contacto (colección `ajustes`, documento `general`: número
+  de WhatsApp y enlace del grupo mayorista) viven en Firebase Firestore y se
+  sincronizan en tiempo real (`js/firebase.js`). Tanto la tienda como el
+  panel admin se actualizan solos apenas hay un cambio, desde cualquier
+  dispositivo.
+- **Carrito**: es lo único que se guarda en `localStorage` (clave
+  `zurikCart`), porque cada visitante arma su propia selección antes de
+  coordinar el pedido por WhatsApp.
 - **Pedido por WhatsApp**: al finalizar la compra se arma un mensaje con el
   detalle del pedido y los datos de envío, y se abre `wa.me` con ese mensaje
   precargado hacia el número configurado en el panel admin.
@@ -66,23 +71,31 @@ El proyecto no requiere build: Vercel lo sirve como sitio estático y
 `index.html`/`admin.html` quedan disponibles en la raíz (`/` y `/admin.html`).
 No hace falta ningún `vercel.json` adicional.
 
-## Preparado para Firebase Firestore
+## Conexión a Firebase Firestore
 
-Hoy los datos viven en `localStorage`. `js/firebase.js` deja lista la
-conexión a Firebase Firestore para el día que se quiera centralizar el
-catálogo en la nube (y así compartirlo entre dispositivos/usuarios). Pasos
-para activarlo están documentados como comentario al inicio de ese archivo:
+`js/firebase.js` es el punto central de conexión a la base de datos: ahí
+vive `FIREBASE_CONFIG`, la inicialización del SDK y todas las funciones que
+leen/escriben en Firestore (`watchPerfumes`, `createPerfume`,
+`updatePerfume`, `deletePerfume`, `watchSettings`, `saveSettings`). Ningún
+otro archivo usa el SDK directamente.
+
+Estructura en Firestore:
+
+- **Colección `perfumes`** — un documento por perfume, con los campos
+  `nombre`, `marca`, `precio`, `categoria`, `imagen` (dataURL JPEG
+  comprimido) y `descripcion` (más `etiqueta`, opcional, para insignias
+  como "Nuevo" o "Más vendido").
+- **Colección `ajustes`** → documento `general`, con los campos `wa`
+  (número de WhatsApp) y `group` (enlace del grupo mayorista).
+
+Si se necesita migrar a otro proyecto de Firebase, basta con:
 
 1. Crear un proyecto en [Firebase Console](https://console.firebase.google.com)
-   y habilitar Firestore.
-2. Completar el objeto `FIREBASE_CONFIG` en `js/firebase.js` con las
-   credenciales del proyecto.
-3. Agregar el SDK de Firebase (`firebase-app-compat.js` y
-   `firebase-firestore-compat.js`) en el `<head>` de `index.html` y
-   `admin.html`, antes de `js/firebase.js`.
-4. Llamar a `initFirebase()` y reemplazar gradualmente `load()`/`save()`
-   de `js/catalogo.js` por lecturas/escrituras a Firestore mediante
-   `getFirestoreDb()`.
+   y habilitar Firestore (en modo producción, con reglas que permitan lectura
+   pública y escritura solo desde el panel admin).
+2. Reemplazar las credenciales en `FIREBASE_CONFIG` (`js/firebase.js`) por
+   las del nuevo proyecto (Configuración del proyecto → General → tus apps).
 
-Mientras `FIREBASE_CONFIG` esté vacío, `firebase.js` no hace nada y el
-sitio sigue funcionando exactamente igual que ahora, con `localStorage`.
+El SDK "compat" de Firebase (`firebase-app-compat.js` y
+`firebase-firestore-compat.js`) ya está cargado en el `<head>`/scripts de
+`index.html` y `admin.html`, antes de `js/firebase.js`.

@@ -1,27 +1,39 @@
 /* ==========================================================================
-   ZURIK · Conexión a Firebase (preparado para activarse)
+   ZURIK · Conexión a Firebase Firestore — punto central de datos
    --------------------------------------------------------------------------
-   Hoy el catálogo, el carrito y los ajustes se guardan en localStorage
-   (ver js/catalogo.js → load()/save()), por lo que cada navegador tiene su
-   propia copia de los datos. Este archivo deja lista la conexión a Firebase
-   Firestore para el día que se quiera pasar a una base de datos en la nube
-   y así compartir el inventario entre la tienda y el panel de admin desde
-   cualquier dispositivo.
+   Este archivo es el ÚNICO lugar que habla con Firestore. catalogo.js,
+   app.js y admin.js no usan el SDK directamente: solo llaman a las
+   funciones que se exponen aquí.
 
-   CÓMO ACTIVARLO:
-   1. Crear un proyecto en https://console.firebase.google.com y habilitar
-      "Firestore Database".
-   2. En "Configuración del proyecto → General" copiar el objeto de
-      configuración del SDK web y pegarlo en FIREBASE_CONFIG (más abajo).
-   3. Agregar el SDK de Firebase (versión "compat", para no requerir módulos
-      ES) en el <head> de index.html y admin.html, ANTES de este archivo:
-        <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-   4. Llamar a initFirebase() — por ejemplo, al inicio de catalogo.js — y usar
-      getFirestoreDb() donde antes se usaba localStorage.
+   Funciones expuestas:
+     · watchPerfumes(cb)      Suscribe en tiempo real a la colección
+                              "perfumes". cb(listaDeProductos) se llama al
+                              conectar y de nuevo cada vez que algo cambia
+                              (alta, edición o borrado, incluso desde otro
+                              dispositivo/pestaña).
+     · createPerfume(datos)   Crea un perfume nuevo.
+     · updatePerfume(id,datos) Actualiza un perfume existente.
+     · deletePerfume(id)      Elimina un perfume.
+     · watchSettings(cb)      Suscribe en tiempo real al documento de
+                              ajustes (número de WhatsApp y enlace del
+                              grupo mayorista).
+     · saveSettings(datos)    Guarda/combina ajustes.
+
+   Estructura en Firestore:
+     · Colección "perfumes" — un documento por perfume con los campos
+       nombre, marca, precio, categoria, imagen, descripcion (y "etiqueta"
+       para la insignia opcional tipo "Nuevo" / "Más vendido").
+     · Colección "ajustes" → documento "general" con los campos
+       wa (número de WhatsApp) y group (enlace del grupo mayorista).
+
+   Requisitos (ya resueltos en index.html / admin.html):
+     1. Cargar el SDK "compat" de Firebase ANTES de este archivo:
+          <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+          <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+     2. Tener Firestore habilitado en el proyecto y FIREBASE_CONFIG completo
+        (se obtiene en Configuración del proyecto → General → tus apps).
    ========================================================================== */
 
-// 🔧 Reemplaza estos valores por las credenciales de tu proyecto de Firebase.
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDQwf3sz98SQxg0qUIvL1RBUCMrQajP_9c",
   authDomain: "zurik-perfumeria.firebaseapp.com",
@@ -31,19 +43,23 @@ const FIREBASE_CONFIG = {
   appId: "1:462641964308:web:94f21d6f2516e0affb4e01"
 };
 
+const PERFUMES_COLLECTION='perfumes';
+const SETTINGS_COLLECTION='ajustes';
+const SETTINGS_DOC='general';
+
 let firebaseApp=null;
 let firestoreDb=null;
 
-/* Inicializa Firebase y Firestore. Si el SDK todavía no fue agregado al HTML
-   (paso 3 de arriba), avisa por consola en lugar de romper la página, para
-   que el resto del sitio siga funcionando con localStorage mientras tanto. */
+/* Inicializa Firebase y Firestore. Si el SDK no fue cargado o falta
+   configurar el proyecto, avisa por consola y devuelve null: el resto del
+   sitio puede seguir mostrando la interfaz sin romperse. */
 function initFirebase(){
   if(typeof firebase==='undefined'){
-    console.warn('[ZURIK] SDK de Firebase no encontrado. Agrega los <script> del SDK antes de js/firebase.js para activar Firestore.');
+    console.warn('[ZURIK] SDK de Firebase no encontrado. Verifica que los <script> del SDK estén antes de js/firebase.js.');
     return null;
   }
   if(!FIREBASE_CONFIG.projectId){
-    console.warn('[ZURIK] Falta completar FIREBASE_CONFIG en js/firebase.js antes de inicializar Firebase.');
+    console.warn('[ZURIK] Falta completar FIREBASE_CONFIG en js/firebase.js.');
     return null;
   }
   if(!firebaseApp){
@@ -52,12 +68,86 @@ function initFirebase(){
   }
   return firestoreDb;
 }
-
-/* Devuelve la instancia de Firestore, inicializándola si hace falta.
-   Mientras FIREBASE_CONFIG esté vacío, devuelve null y el resto del código
-   debe seguir usando el almacenamiento local (comportamiento actual). */
 function getFirestoreDb(){
   return firestoreDb||initFirebase();
 }
+function noop(){}
 
-// initFirebase(); // ← Descomenta esta línea cuando hayas completado FIREBASE_CONFIG y agregado el SDK.
+/* ==========================================================================
+   Mapeo de campos
+   --------------------------------------------------------------------------
+   En Firestore los perfumes se guardan con nombres en español (nombre,
+   marca, precio, categoria, imagen, descripcion, etiqueta). La tienda y el
+   panel admin trabajan internamente con (name, house, price, cat, notes,
+   img, badge); estas dos funciones traducen entre ambos mundos para que el
+   resto del código no necesite cambiar.
+   ========================================================================== */
+function perfumeFromDoc(doc){
+  const d=doc.data()||{};
+  return {
+    id:doc.id,
+    house:d.marca||'',
+    name:d.nombre||'',
+    price:Number(d.precio)||0,
+    cat:d.categoria||'',
+    notes:d.descripcion||'',
+    img:d.imagen||'',
+    badge:d.etiqueta||''
+  };
+}
+function perfumeToDoc(p){
+  return {
+    nombre:p.name||'',
+    marca:p.house||'',
+    precio:Number(p.price)||0,
+    categoria:p.cat||'',
+    descripcion:p.notes||'',
+    imagen:p.img||'',
+    etiqueta:p.badge||''
+  };
+}
+
+/* ==========================================================================
+   Catálogo — colección "perfumes"
+   ========================================================================== */
+function watchPerfumes(onChange){
+  const db=getFirestoreDb();
+  if(!db){onChange([]);return noop;}
+  return db.collection(PERFUMES_COLLECTION).onSnapshot(
+    snap=>onChange(snap.docs.map(perfumeFromDoc)),
+    err=>console.error('[ZURIK] No se pudo sincronizar el catálogo con Firestore:',err)
+  );
+}
+function createPerfume(data){
+  const db=getFirestoreDb();
+  if(!db)return Promise.reject(new Error('Firestore no disponible'));
+  return db.collection(PERFUMES_COLLECTION).add(perfumeToDoc(data));
+}
+function updatePerfume(id,data){
+  const db=getFirestoreDb();
+  if(!db)return Promise.reject(new Error('Firestore no disponible'));
+  return db.collection(PERFUMES_COLLECTION).doc(id).set(perfumeToDoc(data));
+}
+function deletePerfume(id){
+  const db=getFirestoreDb();
+  if(!db)return Promise.reject(new Error('Firestore no disponible'));
+  return db.collection(PERFUMES_COLLECTION).doc(id).delete();
+}
+
+/* ==========================================================================
+   Ajustes — colección "ajustes", documento "general"
+   (número de WhatsApp y enlace del grupo mayorista)
+   ========================================================================== */
+function watchSettings(onChange){
+  const db=getFirestoreDb();
+  if(!db){onChange(null);return noop;}
+  return db.collection(SETTINGS_COLLECTION).doc(SETTINGS_DOC).onSnapshot(
+    doc=>onChange(doc.exists?doc.data():null),
+    err=>console.error('[ZURIK] No se pudo sincronizar los ajustes con Firestore:',err)
+  );
+}
+function saveSettings(data){
+  const db=getFirestoreDb();
+  if(!db)return Promise.reject(new Error('Firestore no disponible'));
+  return db.collection(SETTINGS_COLLECTION).doc(SETTINGS_DOC).set(data,{merge:true});
+}

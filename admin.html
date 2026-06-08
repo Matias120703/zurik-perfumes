@@ -145,8 +145,11 @@
 </div>
 
 <!-- ============ SCRIPTS ============
-     Mismo orden que en index.html: firebase.js y catalogo.js primero
-     (datos y utilidades compartidas), admin.js al final. -->
+     Mismo orden que en index.html: primero el SDK de Firebase, luego
+     firebase.js y catalogo.js (datos y utilidades compartidas), admin.js
+     al final. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="js/firebase.js"></script>
 <script src="js/catalogo.js"></script>
 <script src="js/admin.js"></script>
