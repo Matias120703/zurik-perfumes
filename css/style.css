@@ -30,7 +30,7 @@
 
 /* ---------- Reset / base ---------- */
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%;overflow-x:hidden}
 body{
   background:var(--bg);
   color:var(--text);
@@ -43,7 +43,7 @@ body{
 }
 body.no-scroll{overflow:hidden}
 img{display:block;max-width:100%}
-button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;touch-action:manipulation}
 input,textarea,select{font-family:inherit}
 .tabular{font-variant-numeric:tabular-nums}
 
@@ -360,7 +360,7 @@ textarea.input{min-height:80px;resize:vertical;line-height:1.5}
   display:flex;align-items:center;justify-content:center;flex-direction:column;
   transition:opacity .7s ease,visibility .7s ease}
 .splash.hide{opacity:0;visibility:hidden}
-.splash-inner{text-align:center;padding:20px;max-width:560px}
+.splash-inner{text-align:center;padding:20px;max-width:560px;width:100%}
 .splash-logo{width:min(330px,72vw);height:auto;margin:0 auto;display:block;
   opacity:0;transform:scale(.86);filter:drop-shadow(0 12px 40px rgba(200,164,100,.18));
   animation:splashLogo 1.5s cubic-bezier(.2,.7,.2,1) .15s forwards}
@@ -385,10 +385,12 @@ textarea.input{min-height:80px;resize:vertical;line-height:1.5}
   .brand-mark{width:36px;height:36px}
   .hero{padding:64px 20px 50px}
   .catalog{padding:14px 18px 80px}
+  .section-head h2{font-size:28px}
   .filters-bar{gap:12px}
-  .filter-field{max-width:none;flex:1 1 130px}
+  .filter-field{max-width:none;flex:1 1 130px;min-width:0}
   .filter-reset{flex:1 1 100%;justify-content:center}
-  .grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+  /* minmax(148px,1fr): caben 2 columnas en 324px (360 – 36px padding) → 2×148+14gap=310px ✓ */
+  .grid{grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px}
   .card-body{padding:15px}
   .card-body h3{font-size:20px}
   .price{font-size:19px}
@@ -398,4 +400,6 @@ textarea.input{min-height:80px;resize:vertical;line-height:1.5}
   .maps-btn{justify-content:center}
   .splash-values{gap:18px}
   .trust-item{min-width:100%;max-width:none}
+  /* font-size ≥16px en inputs: evita zoom automático en iOS y escala indeseada en Android */
+  .input,.filter-select,.filter-input,.search-input{font-size:16px}
 }

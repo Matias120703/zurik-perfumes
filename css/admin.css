@@ -122,10 +122,17 @@
 
 /* ---------- Responsive (móvil): tabla en formato de tarjetas ---------- */
 @media(max-width:620px){
+  .admin-wrap{padding:20px 16px 60px}
+  .admin-top h2{font-size:26px}
+  .admin-top{margin-bottom:22px}
+  .admin-actions{flex-wrap:wrap}
+  .admin-actions .btn{font-size:12px;padding:10px 14px;letter-spacing:.04em}
   .admin-table .tprod .meta{display:none}
   .admin-table thead{display:none}
   .admin-table,.admin-table tbody,.admin-table tr,.admin-table td{display:block;width:100%}
   .admin-table tr{border-bottom:1px solid var(--line);padding:6px 0}
   .admin-table td{border:none;padding:8px 16px}
   .row-actions{justify-content:flex-start;padding-bottom:14px}
+  .finance-daterange{flex-direction:column}
+  .finance-daterange .field{min-width:0;width:100%}
 }
