@@ -140,25 +140,120 @@ function saveProduct(){
   });
 }
 
-/* ---------- Carga de imagen (con compresión a JPEG) ----------
-   La foto se redimensiona en un <canvas> a un máximo de 700px de lado y se
-   guarda como dataURL JPEG dentro del propio documento de Firestore (campo
-   "imagen"), sin depender de un servidor de archivos ni de Storage. La
-   compresión mantiene el dataURL liviano (muy por debajo del límite de 1MB
-   por documento de Firestore). */
+/* ---------- Carga de imagen (recorte + fondo transparente automático) ----------
+   Antes de guardar, la foto se analiza en un <canvas> local (nunca se sube a
+   ningún servidor para esto, todo pasa en el navegador del admin):
+     1. Si las 4 esquinas ya son transparentes → la foto ya es un PNG con
+        fondo transparente, solo hay que encontrar el frasco y recortar el
+        margen vacío.
+     2. Si las 4 esquinas son opacas pero del mismo color (fondo negro,
+        blanco o de cualquier color sólido) → se "rellena" ese color con
+        transparencia mediante un flood-fill desde los bordes, sin tocar
+        píxeles del frasco (el flood-fill se detiene apenas el color deja de
+        coincidir, así no se come partes oscuras del producto).
+     3. Si las esquinas no son ni transparentes ni un color sólido uniforme
+        (foto/flyer con fondo fotográfico, degradados, texturas) no hay nada
+        confiable que detectar: se deja el comportamiento anterior
+        (redimensionar + JPEG) para no arruinar esas fotos.
+   En los casos 1 y 2, el frasco ya recortado se vuelve a centrar en un
+   lienzo nuevo (PNG, fondo transparente) donde ocupa ~80% del área —
+   exactamente lo que se guarda en Firestore en el campo "imagen", en lugar
+   de la imagen original. setPreview() (ya existente) muestra el resultado
+   final sobre una cuadrícula de transparencia antes de guardar. */
+const IMG_WORK_MAX=1000,IMG_OUT_MAX=800,IMG_FILL_TARGET=.8,IMG_BG_TOLERANCE=34;
+
+function imgCornerColors(data,w,h){
+  const at=(x,y)=>{const i=(y*w+x)*4;return [data[i],data[i+1],data[i+2],data[i+3]]};
+  return [at(0,0),at(w-1,0),at(0,h-1),at(w-1,h-1)];
+}
+function imgColorDist(a,b){return Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2])}
+
+/* Flood-fill iterativo (sin recursión) desde los 4 bordes: vuelve
+   transparente todo lo conectado a un borde que coincida con el color de
+   fondo detectado, y se detiene en cuanto encuentra un color distinto. */
+function imgRemoveSolidBackground(data,w,h,ref){
+  const visited=new Uint8Array(w*h);
+  const stack=[];
+  const seed=(x,y)=>{const idx=y*w+x;if(!visited[idx]){visited[idx]=1;stack.push(idx)}};
+  for(let x=0;x<w;x++){seed(x,0);seed(x,h-1)}
+  for(let y=0;y<h;y++){seed(0,y);seed(w-1,y)}
+  while(stack.length){
+    const idx=stack.pop();
+    const x=idx%w,y=(idx-x)/w,i=idx*4;
+    if(data[i+3]>8&&imgColorDist([data[i],data[i+1],data[i+2]],ref)>IMG_BG_TOLERANCE)continue;
+    data[i+3]=0;
+    if(x>0)seed(x-1,y);
+    if(x<w-1)seed(x+1,y);
+    if(y>0)seed(x,y-1);
+    if(y<h-1)seed(x,y+1);
+  }
+}
+function imgFindBBox(data,w,h){
+  let minX=w,minY=h,maxX=-1,maxY=-1;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    if(data[(y*w+x)*4+3]>10){
+      if(x<minX)minX=x;if(x>maxX)maxX=x;
+      if(y<minY)minY=y;if(y>maxY)maxY=y;
+    }
+  }
+  return maxX<0?null:{x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
+}
+/* Único punto de salida cuando no se puede (o no conviene) recortar: el
+   comportamiento de siempre, idéntico al de antes de este cambio. */
+function imgFallbackResize(img){
+  const max=700;let{width:w,height:h}=img;
+  if(w>max||h>max){if(w>h){h=h*max/w;w=max}else{w=w*max/h;h=max}}
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  c.getContext('2d').drawImage(img,0,0,w,h);
+  tempImg=c.toDataURL('image/jpeg',0.82);
+  setPreview(tempImg);
+}
+function processUploadedImage(img){
+  let{width:w,height:h}=img;
+  if(!w||!h){imgFallbackResize(img);return;}
+  const down=Math.min(1,IMG_WORK_MAX/Math.max(w,h));
+  w=Math.max(1,Math.round(w*down));h=Math.max(1,Math.round(h*down));
+  const work=document.createElement('canvas');work.width=w;work.height=h;
+  const wctx=work.getContext('2d');wctx.drawImage(img,0,0,w,h);
+  let imgData;
+  try{imgData=wctx.getImageData(0,0,w,h);}catch(err){imgFallbackResize(img);return;}
+  const data=imgData.data;
+  const corners=imgCornerColors(data,w,h);
+  const avgAlpha=corners.reduce((s,c)=>s+c[3],0)/4;
+  const maxCornerDist=Math.max(
+    imgColorDist(corners[0],corners[1]),imgColorDist(corners[0],corners[2]),
+    imgColorDist(corners[0],corners[3]),imgColorDist(corners[1],corners[2]),
+    imgColorDist(corners[1],corners[3]),imgColorDist(corners[2],corners[3]));
+  const hasTransparency=avgAlpha<40;
+  const flatSolidBg=!hasTransparency&&maxCornerDist<26;
+  if(!hasTransparency&&!flatSolidBg){imgFallbackResize(img);return;}
+
+  if(flatSolidBg){
+    const ref=[0,1,2].map(ch=>corners.reduce((s,c)=>s+c[ch],0)/4);
+    imgRemoveSolidBackground(data,w,h,ref);
+  }
+  const box=imgFindBBox(data,w,h);
+  if(!box||box.w*box.h<w*h*.01){imgFallbackResize(img);return;}
+  wctx.putImageData(imgData,0,0);
+
+  const margin=1/IMG_FILL_TARGET; // el frasco ocupará IMG_FILL_TARGET (80%) del lienzo final
+  let outW=box.w*margin,outH=box.h*margin;
+  const cap=Math.min(1,IMG_OUT_MAX/Math.max(outW,outH));
+  outW=Math.max(1,Math.round(outW*cap));outH=Math.max(1,Math.round(outH*cap));
+  const drawW=box.w*cap,drawH=box.h*cap;
+  const out=document.createElement('canvas');out.width=outW;out.height=outH;
+  out.getContext('2d').drawImage(work,box.x,box.y,box.w,box.h,
+    (outW-drawW)/2,(outH-drawH)/2,drawW,drawH);
+
+  tempImg=out.toDataURL('image/png');
+  setPreview(tempImg);
+}
 document.getElementById('fImg').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;
   const reader=new FileReader();
   reader.onload=ev=>{
     const img=new Image();
-    img.onload=()=>{
-      const max=700;let{width:w,height:h}=img;
-      if(w>max||h>max){if(w>h){h=h*max/w;w=max}else{w=w*max/h;h=max}}
-      const c=document.createElement('canvas');c.width=w;c.height=h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
-      tempImg=c.toDataURL('image/jpeg',0.82);
-      setPreview(tempImg);
-    };
+    img.onload=()=>processUploadedImage(img);
     img.src=ev.target.result;
   };
   reader.readAsDataURL(f);

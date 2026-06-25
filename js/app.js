@@ -26,26 +26,94 @@ const WHOLESALE_GROUP='https://chat.whatsapp.com/'; // ← Se usa si en el panel
    ========================================================================== */
 let searchTerm='';
 let filterCat='';
+let filterBrand='';
 let filterMin=null;
 let filterMax=null;
+let sortBy='novedades';
 
 /* Un perfume pasa si coincide con la búsqueda libre (nombre, marca,
-   categoría o notas) Y respeta la categoría y el rango de precio elegidos
-   en la barra de filtros. Todos los filtros se combinan (AND) y se evalúan
-   en cada render, así la grilla se actualiza sola apenas cambia algo. */
+   categoría o notas) Y respeta la categoría, marca y el rango de precio
+   elegidos en la barra de filtros. Todos los filtros se combinan (AND) y
+   se evalúan en cada render, así la grilla se actualiza sola apenas
+   cambia algo. */
 function matchesFilters(p,q){
   if(q&&![p.name,p.house,p.cat,p.notes].some(f=>(f||'').toLowerCase().includes(q)))return false;
   if(filterCat&&p.cat!==filterCat)return false;
+  if(filterBrand&&p.house!==filterBrand)return false;
   if(filterMin!=null&&p.price<filterMin)return false;
   if(filterMax!=null&&p.price>filterMax)return false;
   return true;
 }
 
+/* Orden de la grilla: novedades (orden de llegada desde Firestore), precio
+   asc/desc o mejor valorados (rating y, en caso de empate, cantidad de
+   reseñas) — sustituye a "popularidad" porque no hay un contador de
+   ventas por producto. */
+function sortList(list){
+  if(sortBy==='precio-asc')return list.slice().sort((a,b)=>a.price-b.price);
+  if(sortBy==='precio-desc')return list.slice().sort((a,b)=>b.price-a.price);
+  if(sortBy==='valorados')return list.slice().sort((a,b)=>(b.rating-a.rating)||((b.reviewCount||0)-(a.reviewCount||0)));
+  return list;
+}
+
+/* Imagen del hero y de cada tarjeta de categoría: se toman del catálogo
+   real ya cargado (primer perfume con foto, o primero de esa categoría
+   con foto). Pensado para cuando esas fotos sean PNG con fondo
+   transparente — hoy puede mostrar una foto con fondo normal mientras
+   tanto, sin romper el layout. Si no hay ninguna, el slot queda oculto
+   (ver CSS img[src]) en vez de mostrar un ícono roto. */
+function updateHeroAndCategoryMedia(){
+  const featured=state.products.find(p=>p.img);
+  if(featured){
+    const heroImg=document.getElementById('heroImg');
+    if(heroImg)heroImg.src=featured.img;
+  }
+  document.querySelectorAll('[data-cat-img]').forEach(img=>{
+    const match=state.products.find(p=>p.cat===img.dataset.catImg&&p.img);
+    if(match)img.src=match.img;
+  });
+}
+
+/* "Más vendidos": no hay contador de ventas por producto en Firestore, así
+   que se usa el rating (calificación + cantidad de reseñas) como proxy,
+   mostrando los 8 perfumes mejor valorados en una fila con scroll
+   horizontal. */
+function renderBestsellers(){
+  const track=document.getElementById('bestsellersTrack');
+  if(!track)return;
+  const best=state.products.slice()
+    .sort((a,b)=>(b.rating-a.rating)||((b.reviewCount||0)-(a.reviewCount||0)))
+    .slice(0,8);
+  track.innerHTML=best.map(p=>{
+    const media=p.img?'<img src="'+p.img+'" alt="'+escapeHtml(p.name)+'" loading="lazy" crossorigin="anonymous">':PERFUME_SVG;
+    return '<div class="bs-card" data-bs="'+p.id+'">'+
+      '<div class="bs-media">'+media+'</div>'+
+      '<div class="bs-body">'+
+        (p.house?'<span class="house">'+escapeHtml(p.house)+'</span>':'')+
+        '<span class="name">'+escapeHtml(p.name)+'</span>'+
+        '<span class="price tabular">₲ '+fmt(p.price)+'</span>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  track.querySelectorAll('[data-bs]').forEach(c=>c.onclick=()=>openDetail(c.dataset.bs));
+  track.querySelectorAll('.bs-media img').forEach(applySmartFit);
+}
+
+/* Repuebla las opciones de marca con los valores reales presentes en el
+   catálogo cargado desde Firestore (campo "house" de cada perfume). */
+function populateBrandFilter(){
+  const sel=document.getElementById('filterBrand');
+  const current=sel.value;
+  const brands=[...new Set(state.products.map(p=>p.house).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  sel.innerHTML='<option value="">Todas</option>'+brands.map(b=>'<option value="'+escapeHtml(b)+'">'+escapeHtml(b)+'</option>').join('');
+  if(brands.includes(current))sel.value=current;
+}
+
 function renderGrid(){
   const g=document.getElementById('grid');g.innerHTML='';
   const q=searchTerm.trim().toLowerCase();
-  const hasFilters=q||filterCat||filterMin!=null||filterMax!=null;
-  const list=state.products.filter(p=>matchesFilters(p,q));
+  const hasFilters=q||filterCat||filterBrand||filterMin!=null||filterMax!=null;
+  const list=sortList(state.products.filter(p=>matchesFilters(p,q)));
   if(!list.length){
     const txt=hasFilters?'No encontramos perfumes con esos filtros.':'Aún no hay perfumes disponibles.';
     g.innerHTML='<div class="empty-cat">'+PERFUME_SVG+'<p>'+txt+'</p></div>';
@@ -54,7 +122,7 @@ function renderGrid(){
   list.forEach(p=>{
     const card=document.createElement('article');card.className='card';card.dataset.id=p.id;
     const media=p.img
-      ?'<div class="card-media"><img src="'+p.img+'" alt="'+escapeHtml(p.name)+'"></div>'
+      ?'<div class="card-media"><img src="'+p.img+'" alt="'+escapeHtml(p.name)+'" loading="lazy" crossorigin="anonymous"></div>'
       :'<div class="card-media"><div class="ph">'+PERFUME_SVG+'</div></div>';
     const badge=p.badge?'<span class="badge">'+escapeHtml(p.badge)+'</span>':'';
     card.innerHTML=media.replace('class="card-media">','class="card-media">'+badge)+
@@ -74,6 +142,7 @@ function renderGrid(){
   });
   g.querySelectorAll('[data-add]').forEach(b=>b.onclick=e=>{e.stopPropagation();addToCart(b.dataset.add)});
   g.querySelectorAll('.card').forEach(c=>c.onclick=()=>openDetail(c.dataset.id));
+  g.querySelectorAll('.card-media img').forEach(applySmartFit);
 }
 
 /* ==========================================================================
@@ -87,9 +156,11 @@ function renderGrid(){
 let detailId=null;
 function renderDetail(p){
   const media=p.img
-    ?'<img src="'+p.img+'" alt="'+escapeHtml(p.name)+'">'
+    ?'<img src="'+p.img+'" alt="'+escapeHtml(p.name)+'" crossorigin="anonymous">'
     :'<div class="ph">'+PERFUME_SVG+'</div>';
-  document.getElementById('detailMedia').innerHTML=media+(p.badge?'<span class="badge">'+escapeHtml(p.badge)+'</span>':'');
+  const detailMediaEl=document.getElementById('detailMedia');
+  detailMediaEl.innerHTML=media+(p.badge?'<span class="badge">'+escapeHtml(p.badge)+'</span>':'');
+  applySmartFit(detailMediaEl.querySelector('img'));
 
   const houseEl=document.getElementById('detailHouse');
   houseEl.textContent=p.house||'';houseEl.style.display=p.house?'':'none';
@@ -116,6 +187,33 @@ function renderDetail(p){
   traitsEl.style.display=traits.length?'':'none';
 
   document.getElementById('detailAddBtn').onclick=()=>addToCart(p.id);
+  document.getElementById('detailWaBtn').onclick=()=>{
+    const num=(state.wa||'').replace(/\D/g,'');
+    const msg='Hola, quiero más información sobre '+p.name+(p.house?' de '+p.house:'')+'.';
+    window.open('https://wa.me/'+num+'?text='+encodeURIComponent(msg),'_blank');
+  };
+  renderRelated(p);
+}
+
+/* Productos relacionados: prioriza otros perfumes de la misma marca y
+   completa con perfumes de la misma categoría, hasta 4 en total. */
+function renderRelated(p){
+  const el=document.getElementById('detailRelated');
+  const sameHouse=state.products.filter(x=>x.id!==p.id&&p.house&&x.house===p.house);
+  const sameCat=state.products.filter(x=>x.id!==p.id&&x.cat===p.cat&&!sameHouse.includes(x));
+  const related=[...sameHouse,...sameCat].slice(0,4);
+  if(!related.length){el.innerHTML='';return;}
+  el.innerHTML='<div class="related-title">También te puede interesar</div><div class="related-grid">'+
+    related.map(r=>{
+      const media=r.img?'<img src="'+r.img+'" alt="'+escapeHtml(r.name)+'" loading="lazy" crossorigin="anonymous">':PERFUME_SVG;
+      return '<div class="related-card" data-rel="'+r.id+'">'+
+        '<div class="rc-media">'+media+'</div>'+
+        '<span class="rc-name">'+escapeHtml(r.name)+'</span>'+
+        '<span class="rc-price tabular">₲ '+fmt(r.price)+'</span>'+
+      '</div>';
+    }).join('')+'</div>';
+  el.querySelectorAll('[data-rel]').forEach(c=>c.onclick=()=>openDetail(c.dataset.rel));
+  el.querySelectorAll('.rc-media img').forEach(applySmartFit);
 }
 function openDetail(id){
   const p=state.products.find(x=>x.id===id);if(!p)return;
@@ -337,16 +435,22 @@ document.getElementById('wholesaleCtaBtn').onclick=()=>window.open(state.group||
   const si=document.getElementById('searchInput');
   const sc=document.getElementById('searchClear');
   const fc=document.getElementById('filterCat');
+  const fb=document.getElementById('filterBrand');
   const fmin=document.getElementById('filterMin');
   const fmax=document.getElementById('filterMax');
+  const sb=document.getElementById('sortBy');
   fc.addEventListener('change',()=>{filterCat=fc.value;renderGrid();});
+  fb.addEventListener('change',()=>{filterBrand=fb.value;renderGrid();});
   fmin.addEventListener('input',()=>{filterMin=fmin.value!==''?parseInt(fmin.value,10):null;renderGrid();});
   fmax.addEventListener('input',()=>{filterMax=fmax.value!==''?parseInt(fmax.value,10):null;renderGrid();});
+  sb.addEventListener('change',()=>{sortBy=sb.value;renderGrid();});
   document.getElementById('filterReset').onclick=()=>{
     si.value='';searchTerm='';sc.style.display='none';
     fc.value='';filterCat='';
+    fb.value='';filterBrand='';
     fmin.value='';filterMin=null;
     fmax.value='';filterMax=null;
+    sb.value='novedades';sortBy='novedades';
     renderGrid();
   };
 })();
@@ -355,15 +459,85 @@ document.getElementById('brandHome').onclick=e=>{e.preventDefault();window.scrol
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeCart();closeCheckout();closeDetail();}});
 
 /* ==========================================================================
+   MENÚ MÓVIL + NAVEGACIÓN (anchors del header/footer)
+   ========================================================================== */
+(function(){
+  const toggle=document.getElementById('menuToggle');
+  const menu=document.getElementById('mobileMenu');
+  function closeMobileMenu(){menu.classList.remove('open');toggle.setAttribute('aria-expanded','false');}
+  toggle.onclick=()=>{
+    const open=menu.classList.toggle('open');
+    toggle.setAttribute('aria-expanded',open?'true':'false');
+  };
+  document.querySelectorAll('[data-nav-home]').forEach(a=>a.addEventListener('click',e=>{
+    e.preventDefault();window.scrollTo({top:0,behavior:'smooth'});closeMobileMenu();
+  }));
+  document.querySelectorAll('[data-nav-cat]').forEach(a=>a.addEventListener('click',()=>{
+    const cat=a.dataset.navCat;
+    filterCat=cat;
+    document.getElementById('filterCat').value=cat;
+    renderGrid();
+    closeMobileMenu();
+  }));
+  document.querySelectorAll('[data-nav-tienda],[data-nav-contacto]').forEach(a=>a.addEventListener('click',closeMobileMenu));
+})();
+
+/* ==========================================================================
+   HERO (botones) + CATEGORÍAS
+   ========================================================================== */
+document.getElementById('heroCatalogBtn').onclick=()=>document.getElementById('tienda').scrollIntoView({behavior:'smooth'});
+document.getElementById('heroBuyBtn').onclick=()=>{
+  document.getElementById('tienda').scrollIntoView({behavior:'smooth'});
+  setTimeout(()=>document.getElementById('searchInput').focus(),450);
+};
+document.querySelectorAll('[data-cat-card]').forEach(btn=>btn.onclick=()=>{
+  const cat=btn.dataset.catCard;
+  filterCat=cat;
+  document.getElementById('filterCat').value=cat;
+  renderGrid();
+  document.getElementById('tienda').scrollIntoView({behavior:'smooth'});
+});
+
+/* ==========================================================================
+   WHATSAPP (botón flotante + enlace del footer)
+   --------------------------------------------------------------------------
+   Comparten el mismo número que el checkout (state.wa), con un mensaje
+   genérico de consulta. Se actualizan al cargar y cada vez que cambian los
+   ajustes desde Firestore. */
+function updateWaLinks(){
+  const num=(state.wa||'').replace(/\D/g,'');
+  const url='https://wa.me/'+num+'?text='+encodeURIComponent('Hola, quiero más información sobre los perfumes.');
+  document.getElementById('waFloat').href=url;
+  const footerLink=document.getElementById('footerWaLink');
+  if(footerLink)footerLink.href=url;
+}
+
+/* ==========================================================================
+   REVEAL AL HACER SCROLL (fade-in / slide-up sin Framer Motion)
+   ========================================================================== */
+(function(){
+  if(!('IntersectionObserver' in window)){
+    document.querySelectorAll('.reveal').forEach(el=>el.classList.add('visible'));
+    return;
+  }
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){entry.target.classList.add('visible');obs.unobserve(entry.target);}
+    });
+  },{threshold:.15});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+})();
+
+/* ==========================================================================
    INICIO
    --------------------------------------------------------------------------
    El carrito vive en este navegador (localStorage). El catálogo y los
    ajustes (WhatsApp, grupo mayorista) llegan en vivo desde Firestore: la
    grilla y el carrito se redibujan solos apenas cambia algo, ya sea desde
    el panel admin o desde otro dispositivo. */
-loadCart();renderCart();checkAdminHash();
+loadCart();renderCart();checkAdminHash();updateWaLinks();
 watchPerfumes(list=>{
-  state.products=list;renderGrid();renderCart();
+  state.products=list;populateBrandFilter();updateHeroAndCategoryMedia();renderBestsellers();renderGrid();renderCart();
   if(detailId){
     const p=state.products.find(x=>x.id===detailId);
     if(p)renderDetail(p);else closeDetail();
@@ -373,4 +547,5 @@ watchSettings(s=>{
   if(!s)return;
   if(s.wa)state.wa=s.wa;
   if(typeof s.group!=='undefined')state.group=s.group;
+  updateWaLinks();
 });
