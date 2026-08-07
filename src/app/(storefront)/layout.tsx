@@ -4,6 +4,7 @@ import "../globals.css";
 
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
+import { getStorefrontThemeStyle } from "@/lib/theme";
 import { getPublicBusinessSettings } from "@/services/storefront/business";
 
 const geistSans = Geist({
@@ -51,8 +52,30 @@ export default async function RootLayout({
 }>) {
   const settings = await getPublicBusinessSettings();
 
+  /**
+   * Tema de marca ("Colores del tema", /admin/configuracion -> Apariencia):
+   * se resuelve acá, server-side, y se aplica como `style` inline en
+   * <html> -- el mismo mecanismo ya usado para el logo/favicon dinámicos
+   * (Fase 14), aplicado ahora a color en vez de a una URL de imagen. Al
+   * quedar en el HTML que manda el servidor desde el primer byte, no hay
+   * ningún flash de color por defecto antes del real (a diferencia de un
+   * ThemeProvider de cliente, que solo podría aplicar el color después de
+   * hidratar). Sin colores configurados (null), `getStorefrontThemeStyle`
+   * devuelve un objeto vacío -- `style={{}}` no cambia nada, y
+   * `globals.css` sigue aplicando los mismos valores de siempre.
+   */
+  const themeStyle = getStorefrontThemeStyle({
+    primaryColor: settings.primaryColor,
+    secondaryColor: settings.secondaryColor,
+    accentColor: settings.accentColor,
+  });
+
   return (
-    <html lang="es" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html
+      lang="es"
+      className={`${geistSans.variable} ${geistMono.variable}`}
+      style={themeStyle}
+    >
       <body className="antialiased">
         <Header settings={settings} />
         {children}

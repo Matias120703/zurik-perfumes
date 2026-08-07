@@ -207,7 +207,11 @@ export function ProductCard({
           <Button
             size="sm"
             disabled={outOfStock}
-            className="w-full"
+            className={cn(
+              "w-full",
+              !outOfStock &&
+                "bg-[var(--brand-accent)] text-[var(--brand-accent-foreground)] hover:opacity-90"
+            )}
             onClick={() => addProduct(product)}
           >
             {outOfStock ? "Sin stock" : "Agregar al carrito"}

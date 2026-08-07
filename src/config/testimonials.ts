@@ -27,15 +27,6 @@ export const testimonials: Testimonial[] = [
     avatar: "/testimonials/martin-gomez.jpg",
   },
   {
-    id: "testimonial-3",
-    name: "Sofía Ramírez",
-    city: "Ciudad del Este",
-    rating: 4,
-    comment:
-      "Muy buena experiencia de compra. El envío tardó un poco más de lo esperado, pero valió la pena.",
-    avatar: "/testimonials/sofia-ramirez.jpg",
-  },
-  {
     id: "testimonial-4",
     name: "Diego Torres",
     city: "Encarnación",

@@ -14,6 +14,7 @@ import {
   BrandingAssetField,
   type PendingBrandingAsset,
 } from "@/components/admin/settings/BrandingAssetField";
+import { ColorField } from "@/components/admin/settings/ColorField";
 import { useSettings } from "@/hooks/useSettings";
 import {
   deleteBrandingAsset,
@@ -22,8 +23,17 @@ import {
   MAX_BRANDING_FILE_SIZE_MB,
   type SettingsFormInput,
 } from "@/services/settings";
+import {
+  DEFAULT_ACCENT_COLOR,
+  DEFAULT_PRIMARY_COLOR,
+  DEFAULT_SECONDARY_COLOR,
+  getContrastingTextColor,
+  isValidHexColor,
+} from "@/lib/theme";
 
-type FieldErrors = Partial<Record<"storeName" | "whatsappNumber", string>>;
+type FieldErrors = Partial<
+  Record<"storeName" | "whatsappNumber" | "primaryColor" | "secondaryColor" | "accentColor", string>
+>;
 
 /** Opciones del selector de Hero (Sprint 6.5): puramente visual, sin
  * `value`/`onChange` -- ningún sprint anterior a este implementó todavía
@@ -32,15 +42,6 @@ const HERO_PREVIEW_OPTIONS = [
   { label: "Imagen", icon: ImageIcon },
   { label: "Video", icon: Video },
   { label: "Productos destacados", icon: Sparkles },
-] as const;
-
-/** Mismo criterio que `HERO_PREVIEW_OPTIONS`: solo la etiqueta y un color de
- * ejemplo tomado de los tokens `oklch` ya existentes (`globals.css`) --
- * ningún campo nuevo en `business_settings`, ningún estado editable. */
-const THEME_COLOR_PREVIEW_OPTIONS = [
-  { label: "Color principal", swatch: "var(--primary)" },
-  { label: "Color secundario", swatch: "var(--secondary)" },
-  { label: "Color de botones", swatch: "var(--accent)" },
 ] as const;
 
 function ComingSoonBadge() {
@@ -75,6 +76,59 @@ function SettingsSection({
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       {children}
+    </div>
+  );
+}
+
+/**
+ * Preview en vivo de los 3 colores mientras se editan (punto 8 del
+ * sprint) -- deliberadamente chica: dos botones de ejemplo y una
+ * "superficie" de fondo, no una réplica de la tienda. Usa los valores del
+ * formulario directamente (todavía sin guardar), no las variables CSS
+ * `--brand-*` -- esas solo se actualizan recién cuando la tienda pública
+ * vuelve a renderizar el layout raíz con la fila ya guardada, así que acá
+ * hace falta calcular el color en el momento para que el admin vea el
+ * cambio antes de guardar.
+ */
+function ThemeColorPreview({
+  primaryColor,
+  secondaryColor,
+  accentColor,
+}: {
+  primaryColor: string | null;
+  secondaryColor: string | null;
+  accentColor: string | null;
+}) {
+  const primary = isValidHexColor(primaryColor ?? "") ? primaryColor! : DEFAULT_PRIMARY_COLOR;
+  const secondary = isValidHexColor(secondaryColor ?? "") ? secondaryColor! : DEFAULT_SECONDARY_COLOR;
+  const accent = isValidHexColor(accentColor ?? "") ? accentColor! : DEFAULT_ACCENT_COLOR;
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border p-4">
+      <span
+        className="inline-flex h-9 items-center justify-center rounded-lg px-4 text-sm font-medium"
+        style={{ backgroundColor: primary, color: getContrastingTextColor(primary) }}
+      >
+        Botón principal
+      </span>
+      <span
+        className="inline-flex h-9 items-center justify-center rounded-lg px-4 text-sm font-medium"
+        style={{ backgroundColor: secondary, color: getContrastingTextColor(secondary) }}
+      >
+        Botón secundario
+      </span>
+      <span
+        className="inline-flex h-9 items-center justify-center rounded-lg px-4 text-sm font-medium"
+        style={{ backgroundColor: accent, color: getContrastingTextColor(accent) }}
+      >
+        Agregar al carrito
+      </span>
+      <span
+        className="inline-flex h-9 min-w-32 flex-1 items-center justify-center rounded-lg border border-border text-xs text-muted-foreground"
+        style={{ backgroundColor: `color-mix(in srgb, ${secondary} 25%, transparent)` }}
+      >
+        Superficie de ejemplo
+      </span>
     </div>
   );
 }
@@ -117,7 +171,22 @@ export function SettingsForm() {
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
   useEffect(() => {
-    if (settings) setForm(settings);
+    if (!settings) return;
+    /**
+     * Los 3 colores llegan `null` de la base hasta que un admin los
+     * configura por primera vez -- acá se resuelven a un valor concreto
+     * (el color efectivo actual del template) para que `ColorField`
+     * siempre tenga algo que mostrar, mismo criterio ya establecido por
+     * `CategoryForm.tsx` con `accentColor`/`DEFAULT_COLOR`. Mientras el
+     * admin no guarde, la base sigue en `null` -- recién al primer
+     * "Guardar cambios" se persiste el valor mostrado acá.
+     */
+    setForm({
+      ...settings,
+      primaryColor: settings.primaryColor ?? DEFAULT_PRIMARY_COLOR,
+      secondaryColor: settings.secondaryColor ?? DEFAULT_SECONDARY_COLOR,
+      accentColor: settings.accentColor ?? DEFAULT_ACCENT_COLOR,
+    });
   }, [settings]);
 
   useEffect(() => {
@@ -136,6 +205,15 @@ export function SettingsForm() {
     const errors: FieldErrors = {};
     if (!current.storeName.trim()) errors.storeName = "El nombre del negocio es obligatorio.";
     if (!current.whatsappNumber.trim()) errors.whatsappNumber = "El número de WhatsApp es obligatorio.";
+    if (current.primaryColor && !isValidHexColor(current.primaryColor)) {
+      errors.primaryColor = "Formato inválido. Usá #RRGGBB.";
+    }
+    if (current.secondaryColor && !isValidHexColor(current.secondaryColor)) {
+      errors.secondaryColor = "Formato inválido. Usá #RRGGBB.";
+    }
+    if (current.accentColor && !isValidHexColor(current.accentColor)) {
+      errors.accentColor = "Formato inválido. Usá #RRGGBB.";
+    }
     return errors;
   }
 
@@ -442,24 +520,34 @@ export function SettingsForm() {
 
           <SettingsSection
             title="Colores del tema"
-            description="Personalización de la paleta de la tienda."
-            badge={<ComingSoonBadge />}
+            description="Colores de marca de la tienda pública. El texto sobre cada color se elige automáticamente (blanco o negro) según el contraste."
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {THEME_COLOR_PREVIEW_OPTIONS.map(({ label, swatch }) => (
-                <div
-                  key={label}
-                  className="flex items-center gap-3 rounded-xl border border-dashed border-border p-4"
-                >
-                  <span
-                    aria-hidden
-                    className="size-8 shrink-0 rounded-full border border-border"
-                    style={{ backgroundColor: swatch }}
-                  />
-                  <span className="text-sm font-medium text-foreground">{label}</span>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              <ColorField
+                id="primaryColor"
+                label="Color principal"
+                value={form.primaryColor ?? ""}
+                onChange={(value) => update("primaryColor", value)}
+              />
+              <ColorField
+                id="secondaryColor"
+                label="Color secundario"
+                value={form.secondaryColor ?? ""}
+                onChange={(value) => update("secondaryColor", value)}
+              />
+              <ColorField
+                id="accentColor"
+                label="Color de botones"
+                value={form.accentColor ?? ""}
+                onChange={(value) => update("accentColor", value)}
+              />
             </div>
+
+            <ThemeColorPreview
+              primaryColor={form.primaryColor}
+              secondaryColor={form.secondaryColor}
+              accentColor={form.accentColor}
+            />
           </SettingsSection>
 
           <SettingsSection

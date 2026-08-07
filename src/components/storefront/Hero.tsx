@@ -68,6 +68,7 @@ export function Hero({
               <Button
                 size="lg"
                 nativeButton={false}
+                className="bg-[var(--brand-primary)] text-[var(--brand-primary-foreground)] hover:opacity-90"
                 render={<Link href={siteConfig.hero.primaryCta.href} />}
               >
                 {siteConfig.hero.primaryCta.label}

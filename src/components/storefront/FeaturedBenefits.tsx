@@ -11,28 +11,36 @@ export function FeaturedBenefits() {
   const { eyebrow, title, subtitle } = siteConfig.featuredBenefitsSection;
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-20 lg:py-24">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          {eyebrow}
-        </span>
-        <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          {title}
-        </h2>
-        <p className="max-w-md text-muted-foreground">{subtitle}</p>
-      </div>
+    // Fondo suave con el color secundario de marca (18% de opacidad,
+    // punto 5 del sprint: "fondos secundarios, superficies suaves") -- a
+    // esa opacidad, cualquier color que elija el admin se mantiene lo
+    // bastante claro como para que el texto neutro (text-foreground/
+    // text-muted-foreground) siga siendo legible sin necesitar un
+    // contraste calculado, a diferencia de un botón de superficie sólida.
+    <section className="border-y border-border/60 bg-[color-mix(in_srgb,var(--brand-secondary)_18%,transparent)]">
+      <div className="mx-auto max-w-7xl px-6 py-20 lg:py-24">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            {eyebrow}
+          </span>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            {title}
+          </h2>
+          <p className="max-w-md text-muted-foreground">{subtitle}</p>
+        </div>
 
-      <motion.div
-        initial={shouldReduceMotion ? "show" : "hidden"}
-        whileInView="show"
-        viewport={{ once: true, amount: 0.2 }}
-        variants={container}
-        className="mt-14 grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-8 lg:grid-cols-4"
-      >
-        {benefits.map((benefit) => (
-          <BenefitCard key={benefit.id} benefit={benefit} />
-        ))}
-      </motion.div>
+        <motion.div
+          initial={shouldReduceMotion ? "show" : "hidden"}
+          whileInView="show"
+          viewport={{ once: true, amount: 0.2 }}
+          variants={container}
+          className="mt-14 grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-8 lg:grid-cols-4"
+        >
+          {benefits.map((benefit) => (
+            <BenefitCard key={benefit.id} benefit={benefit} />
+          ))}
+        </motion.div>
+      </div>
     </section>
   );
 }

@@ -3,7 +3,7 @@ export const siteConfig = {
   description: "Encontrá lo que buscás, con envío rápido y atención personalizada.",
   hero: {
     eyebrow: "Bienvenido a la tienda",
-    title: "Todo lo que necesitás, en un solo lugar.",
+    title: "Perfumes de Calidad y Buen Precio",
     subtitle:
       "Comprá con confianza: productos verificados, atención directa y envíos rápidos, todo en una experiencia simple.",
     primaryCta: {

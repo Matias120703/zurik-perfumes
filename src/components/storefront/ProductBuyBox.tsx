@@ -107,7 +107,11 @@ export function ProductBuyBox({
         <Button
           disabled={outOfStock}
           size="lg"
-          className="w-full sm:flex-1"
+          className={cn(
+            "w-full sm:flex-1",
+            !outOfStock &&
+              "bg-[var(--brand-accent)] text-[var(--brand-accent-foreground)] hover:opacity-90"
+          )}
           onClick={() => addProduct(product)}
         >
           {outOfStock ? "Sin stock" : "Agregar al carrito"}

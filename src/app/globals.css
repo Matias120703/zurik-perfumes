@@ -82,6 +82,26 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /*
+   * Tema de marca de la tienda pública ("Colores del tema",
+   * /admin/configuracion -> Apariencia). Por defecto apuntan a los mismos
+   * tokens de siempre -- así que mientras `business_settings` no tenga
+   * colores configurados (null), la tienda se ve exactamente igual que
+   * hoy. `(storefront)/layout.tsx` los sobreescribe con un `style` inline
+   * en <html> únicamente cuando hay un color real cargado (lib/theme.ts).
+   * Separados de --primary/--secondary/--accent a propósito: esos tres ya
+   * los usan internamente otros componentes de components/ui/ (ej. el
+   * highlight de hover de <Select> usa --accent) para un significado
+   * distinto al de "color de marca" -- reutilizarlos habría reteñido esos
+   * usos sin que nadie lo pidiera.
+   */
+  --brand-primary: var(--primary);
+  --brand-primary-foreground: var(--primary-foreground);
+  --brand-secondary: var(--secondary);
+  --brand-secondary-foreground: var(--secondary-foreground);
+  --brand-accent: var(--primary);
+  --brand-accent-foreground: var(--primary-foreground);
 }
 
 .dark {
@@ -116,6 +136,14 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Mismo criterio que en :root -- ver comentario ahí. */
+  --brand-primary: var(--primary);
+  --brand-primary-foreground: var(--primary-foreground);
+  --brand-secondary: var(--secondary);
+  --brand-secondary-foreground: var(--secondary-foreground);
+  --brand-accent: var(--primary);
+  --brand-accent-foreground: var(--primary-foreground);
 }
 
 @layer base {
