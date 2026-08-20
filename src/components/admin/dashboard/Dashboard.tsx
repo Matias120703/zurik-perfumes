@@ -20,6 +20,7 @@ import { SetupChecklist } from "@/components/admin/dashboard/SetupChecklist";
 import { SummaryCard } from "@/components/admin/dashboard/SummaryCard";
 import { TopProductsList } from "@/components/admin/dashboard/TopProductsList";
 import { useDashboard } from "@/hooks/useDashboard";
+import { countsAsSale } from "@/services/orders";
 import { formatDate, formatPrice } from "@/lib/utils";
 
 /** `delay` en un `style` inline (no una clase Tailwind arbitraria por
@@ -101,7 +102,14 @@ export function Dashboard() {
         <SummaryCard
           label="Total de pedidos"
           value={String(summary.totalOrders)}
-          description="Pedidos registrados en total"
+          /* Cuando hay cancelados se dicen acá, para que se entienda por
+             qué "ventas totales" (que los excluye) no coincide con este
+             número. */
+          description={
+            summary.cancelledOrders > 0
+              ? `Incluye ${summary.cancelledOrders} cancelado${summary.cancelledOrders === 1 ? "" : "s"}`
+              : "Pedidos registrados en total"
+          }
           icon={ShoppingCart}
         />
         <SummaryCard
@@ -141,30 +149,32 @@ export function Dashboard() {
       {!hasOrders ? null : (
       <Section title="Ventas" delay={100}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {/* Las tres cifras excluyen los pedidos cancelados -- ver
+              `countsAsSale` en services/orders.ts. */}
           <SummaryCard
             label="Ventas totales"
             value={formatPrice(sales.totalSales)}
-            description="Suma de todos los pedidos"
+            description="Sin contar pedidos cancelados"
             icon={Wallet}
             tone="positive"
           />
           <SummaryCard
             label="Ticket promedio"
             value={formatPrice(sales.averageTicket)}
-            description="Total de ventas / cantidad de pedidos"
+            description="Promedio por pedido no cancelado"
             icon={Receipt}
           />
           <SummaryCard
             label="Última venta"
             value={sales.lastSaleAt ? formatDate(sales.lastSaleAt) : "—"}
-            description="Fecha del pedido más reciente"
+            description="Último pedido no cancelado"
             icon={CalendarClock}
           />
         </div>
 
         <div className="mt-2 border-t border-border pt-6">
           <h3 className="mb-4 text-sm font-medium text-muted-foreground">
-            Ventas de los últimos {recentOrders.length} pedidos
+            Ventas de los últimos {recentOrders.filter(countsAsSale).length} pedidos
           </h3>
           <SalesChart orders={recentOrders} />
         </div>

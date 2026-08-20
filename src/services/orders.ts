@@ -26,6 +26,33 @@ export const ORDER_STATUSES: { value: OrderStatus; label: string }[] = [
   { value: "cancelled", label: "Cancelado" },
 ];
 
+/**
+ * Un pedido cancelado NO es una venta.
+ *
+ * Vive acá, junto a `OrderStatus`, porque es un hecho sobre el estado de
+ * un pedido y no de ningún módulo en particular: lo consumen el Dashboard
+ * (ventas totales, ticket promedio, última venta, productos más vendidos,
+ * gráfico) y Clientes (total gastado, cantidad de compras, ticket
+ * promedio, primera/última compra). Tenerlo en un solo lugar es lo que
+ * garantiza que las dos pantallas no puedan volver a contradecirse.
+ *
+ * Hasta este sprint, ambas sumaban todos los pedidos sin mirar el estado
+ * -- criterio heredado de las Fases 16/17, cuando ningún sprint había
+ * pedido excluir ninguno. En la práctica era engañoso: el panel mostraba
+ * "Ventas totales: Gs. 225.000" cuando el único pedido estaba cancelado y
+ * no había entrado un guaraní.
+ *
+ * La regla: los cancelados quedan fuera de TODA cifra de dinero, pero se
+ * siguen contando en "total de pedidos" y en el desglose por estado, y se
+ * siguen mostrando en los listados y en el historial del cliente --
+ * porque el pedido existió.
+ */
+export const CANCELLED_ORDER_STATUS: OrderStatus = "cancelled";
+
+export function countsAsSale(order: { status: OrderStatus }): boolean {
+  return order.status !== CANCELLED_ORDER_STATUS;
+}
+
 export type AdminOrderItem = {
   id: string;
   productId: string | null;

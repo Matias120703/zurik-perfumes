@@ -5,6 +5,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { EmptyState } from "@/components/shared/EmptyState";
 import { formatDate, formatPrice } from "@/lib/utils";
 import type { DashboardRecentOrder } from "@/services/dashboard";
+import { countsAsSale } from "@/services/orders";
 
 /**
  * Gráfico de ventas (Sprint 6.0.1, bug 6) -- reutiliza `recentOrders`, el
@@ -17,16 +18,24 @@ import type { DashboardRecentOrder } from "@/services/dashboard";
  * más precisión de la que hay.
  */
 export function SalesChart({ orders }: { orders: DashboardRecentOrder[] }) {
-  if (orders.length === 0) {
+  /**
+   * Los cancelados quedan fuera del gráfico, igual que de las cifras de
+   * venta -- si no, una cancelación aparecería como un pico de facturación
+   * que nunca existió. Se siguen viendo en "Últimos pedidos", que es un
+   * listado de pedidos y no de ventas.
+   */
+  const saleOrders = orders.filter(countsAsSale);
+
+  if (saleOrders.length === 0) {
     return (
       <EmptyState
         title="Todavía no hay ventas"
-        description="El gráfico de ventas va a aparecer apenas se registre el primer pedido."
+        description="El gráfico de ventas va a aparecer apenas se registre el primer pedido que no esté cancelado."
       />
     );
   }
 
-  const chartData = [...orders]
+  const chartData = [...saleOrders]
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map((order) => ({
       orderNumber: order.orderNumber,

@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/client";
-import { ORDER_STATUSES, type OrderStatus } from "@/services/orders";
+import {
+  CANCELLED_ORDER_STATUS,
+  ORDER_STATUSES,
+  countsAsSale,
+  type OrderStatus,
+} from "@/services/orders";
 
 /**
  * Toda la comunicación admin para el Dashboard vive acá -- 100% solo
@@ -20,6 +25,9 @@ export type DashboardSummary = {
   totalOrders: number;
   pendingOrders: number;
   deliveredOrders: number;
+  /** Se muestra junto a "total de pedidos" para que las cifras de venta
+   * (que lo excluyen) reconcilien con el conteo de pedidos. */
+  cancelledOrders: number;
   totalCustomers: number;
   activeProducts: number;
   activeCategories: number;
@@ -99,6 +107,14 @@ type OrderItemAggregateRow = {
   subtotal: number;
 };
 
+/**
+ * `orders!inner(status)` fuerza un INNER JOIN contra el pedido dueño de
+ * cada línea, que es lo que permite filtrar por `orders.status` desde
+ * PostgREST. Sin el `!inner` el filtro sobre el recurso embebido no
+ * descarta la fila, sólo vacía el embed.
+ */
+const TOP_PRODUCTS_SELECT = "product_id, product_name, quantity, subtotal, orders!inner(status)";
+
 const RECENT_ORDERS_LIMIT = 10;
 const TOP_PRODUCTS_LIMIT = 5;
 
@@ -106,12 +122,9 @@ const TOP_PRODUCTS_LIMIT = 5;
  * Un solo `select` sobre `orders` (status/total/created_at, todas las
  * filas) alimenta a la vez el resumen (total/pendientes/entregados),
  * ventas (total/ticket promedio/última venta) y el desglose por estado --
- * evita repetir la misma consulta tres veces. "Ventas totales"/"ticket
- * promedio" suman **todos** los pedidos sin importar su estado (incluidos
- * los cancelados): mismo criterio ya aplicado a "total gastado" en
- * services/customers.ts (Fase 16) -- el sprint no pidió excluir ningún
- * estado, y mantener el mismo criterio en todo el panel es más
- * consistente que decidirlo distinto acá (ver CLAUDE.md sección 9, Fase 17).
+ * evita repetir la misma consulta tres veces. Las cifras de venta
+ * (total/ticket promedio/última venta) filtran después los cancelados
+ * con `countsAsSale` -- ver el comentario de esa función.
  */
 async function getOrderAggregates() {
   const supabase = createClient();
@@ -199,7 +212,9 @@ async function getTopProducts(): Promise<DashboardTopProduct[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("order_items")
-    .select("product_id, product_name, quantity, subtotal");
+    .select(TOP_PRODUCTS_SELECT)
+    // Un pedido cancelado no vendió nada: sus líneas no cuentan acá.
+    .neq("orders.status", CANCELLED_ORDER_STATUS);
   if (error) throw new Error(error.message);
 
   const rows = (data ?? []) as unknown as OrderItemAggregateRow[];
@@ -246,8 +261,12 @@ export async function getDashboardData(): Promise<DashboardData> {
   ]);
 
   const totalOrders = orderRows.length;
-  const totalSales = orderRows.reduce((sum, order) => sum + Number(order.total), 0);
-  const lastSaleAt = orderRows.reduce<string | null>(
+
+  // Las tres cifras de dinero se calculan sólo sobre los pedidos que
+  // cuentan como venta -- un cancelado no facturó nada.
+  const saleRows = orderRows.filter(countsAsSale);
+  const totalSales = saleRows.reduce((sum, order) => sum + Number(order.total), 0);
+  const lastSaleAt = saleRows.reduce<string | null>(
     (latest, order) => (latest === null || order.created_at > latest ? order.created_at : latest),
     null
   );
@@ -262,13 +281,17 @@ export async function getDashboardData(): Promise<DashboardData> {
       totalOrders,
       pendingOrders: countByStatus.get("pending") ?? 0,
       deliveredOrders: countByStatus.get("delivered") ?? 0,
+      cancelledOrders: countByStatus.get(CANCELLED_ORDER_STATUS) ?? 0,
       totalCustomers,
       activeProducts,
       activeCategories,
     },
     sales: {
       totalSales,
-      averageTicket: totalOrders > 0 ? totalSales / totalOrders : 0,
+      // Promedio sobre los pedidos que efectivamente son venta, no sobre
+      // el total -- dividir por pedidos cancelados bajaría el ticket
+      // promedio de forma artificial.
+      averageTicket: saleRows.length > 0 ? totalSales / saleRows.length : 0,
       lastSaleAt,
     },
     recentOrders,

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import type { OrderStatus } from "@/services/orders";
+import { countsAsSale, type OrderStatus } from "@/services/orders";
 
 /**
  * Toda la comunicación admin con `customers` (+ sus `orders`, para el
@@ -8,9 +8,11 @@ import type { OrderStatus } from "@/services/orders";
  * A diferencia de esas tres, este módulo es de **solo lectura**: no hay
  * alta ni edición ni baja de clientes -- los crea (por upsert de
  * teléfono) únicamente `create_order` (Fase 15), cuando se registra el
- * primer pedido. `OrderStatus` se reutiliza de `services/orders.ts`
- * (import de solo lectura, no se modifica ese archivo -- "NO modificar
- * Pedidos" sigue respetado).
+ * primer pedido. `OrderStatus` y `countsAsSale` se reutilizan de
+ * `services/orders.ts` (import de solo lectura): esa es la única
+ * definición de "un pedido cancelado no es una venta" en todo el
+ * proyecto, compartida con el Dashboard, para que las dos pantallas no
+ * puedan contradecirse.
  *
  * Las estadísticas (total gastado, cantidad de pedidos, ticket promedio,
  * primera/última compra) **no se guardan en ninguna tabla ni vista**: se
@@ -72,6 +74,7 @@ export type AdminCustomerDetail = {
 };
 
 type CustomerOrderRow = {
+  status: OrderStatus;
   total: number;
   created_at: string;
 };
@@ -88,15 +91,27 @@ type CustomerRow = {
 
 const CUSTOMER_LIST_SELECT = `
   id, first_name, last_name, phone, email, created_at,
-  orders ( total, created_at )
+  orders ( status, total, created_at )
 `;
 
 function mapCustomerRow(row: CustomerRow): AdminCustomer {
+  /**
+   * "Pedidos" (la columna de la tabla) cuenta todos los pedidos del
+   * cliente, incluidos los cancelados -- el pedido existió. "Total
+   * gastado" y "Última compra", en cambio, son cifras de compra: los
+   * cancelados quedan afuera (`countsAsSale`, `services/orders.ts`),
+   * mismo criterio que el Dashboard.
+   */
   const orderCount = row.orders.length;
-  const totalSpent = row.orders.reduce((sum, order) => sum + Number(order.total), 0);
-  const lastOrderAt = orderCount > 0
-    ? row.orders.reduce((latest, order) => (order.created_at > latest ? order.created_at : latest), row.orders[0].created_at)
-    : null;
+  const saleOrders = row.orders.filter(countsAsSale);
+  const totalSpent = saleOrders.reduce((sum, order) => sum + Number(order.total), 0);
+  const lastOrderAt =
+    saleOrders.length > 0
+      ? saleOrders.reduce(
+          (latest, order) => (order.created_at > latest ? order.created_at : latest),
+          saleOrders[0].created_at
+        )
+      : null;
 
   return {
     id: row.id,
@@ -173,13 +188,22 @@ export async function getCustomerById(id: string): Promise<AdminCustomerDetail |
     paymentMethodName: order.payment_method_name,
   }));
 
-  const totalSpent = orders.reduce((sum, order) => sum + Number(order.total), 0);
-  const orderCount = orders.length;
+  /**
+   * Las cinco estadísticas del detalle son de COMPRA ("Total gastado",
+   * "Cantidad de compras", "Ticket promedio", "Primera compra", "Última
+   * compra"), así que ninguna cuenta los pedidos cancelados. El historial
+   * de más abajo (`orderSummaries`) sí los sigue mostrando, con su badge
+   * de "Cancelado" -- una cosa es lo que el cliente compró y otra lo que
+   * pidió alguna vez.
+   */
+  const saleOrders = orders.filter(countsAsSale);
+  const totalSpent = saleOrders.reduce((sum, order) => sum + Number(order.total), 0);
+  const orderCount = saleOrders.length;
 
-  // orders ya viene ordenado created_at desc -- el primero es la última
-  // compra, el último es la primera compra.
-  const lastOrderAt = orderCount > 0 ? orders[0].created_at : null;
-  const firstOrderAt = orderCount > 0 ? orders[orderCount - 1].created_at : null;
+  // saleOrders hereda el orden created_at desc de la consulta -- el
+  // primero es la última compra, el último es la primera compra.
+  const lastOrderAt = orderCount > 0 ? saleOrders[0].created_at : null;
+  const firstOrderAt = orderCount > 0 ? saleOrders[orderCount - 1].created_at : null;
 
   const mostRecentDelivery = orders.find((order) => order.delivery_method === "delivery" && order.address);
   const primaryAddress = mostRecentDelivery

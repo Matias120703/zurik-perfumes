@@ -20,7 +20,7 @@ export function TopProductsList({ products }: { products: DashboardTopProduct[] 
     return (
       <EmptyState
         title="Todavía no hay ventas"
-        description="Los productos más vendidos van a aparecer acá apenas se registre el primer pedido."
+        description="Los productos más vendidos van a aparecer acá apenas se concrete el primer pedido. Los pedidos cancelados no cuentan."
       />
     );
   }
