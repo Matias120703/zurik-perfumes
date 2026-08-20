@@ -1276,6 +1276,22 @@ supabase/                              # Infraestructura de Supabase (Fase 8). E
 
 ---
 
+### Fase 37 — Sprint 7.3: "Retiro en tienda" pasa a ser opcional (y queda apagado en ZURIK)
+
+- **Pedido del usuario**: ZURIK no tiene local físico todavía, así que ofrecer "Retiro en tienda" en el checkout lleva a un pedido que nadie puede ir a buscar a ningún lado.
+
+  **Configurable, no borrado.** El usuario dijo "no contamos con local físico **aún**", y este proyecto es un template que otros clientes reutilizan (CLAUDE.md sección 2) -- varios sí tienen local. Arrancar el retiro de raíz habría roto esa reutilización y habría dejado un hecho de negocio de un cliente puntual hardcodeado en un componente, justo lo que la sección 2 prohíbe. Se agregó `business_settings.pickup_enabled` (`default true`, para no cambiar el comportamiento de ningún otro cliente) y se apagó para ZURIK.
+
+  **Checkout**: `ShippingInformation` recibe `pickupEnabled` por prop desde `CheckoutForm`, que lo resuelve una sola vez con el cliente de browser (`getPublicBusinessSettingsClient`) -- que cada sección del formulario hiciera su propia consulta multiplicaría los round-trips de la pantalla más crítica para la conversión. Con el retiro apagado **no se muestra ningún selector**: no tiene sentido pedirle a alguien que elija entre una sola opción. Mientras la consulta está en vuelo tampoco se muestra, para no hacer aparecer y desaparecer un control en la cara del cliente ("delivery" ya es el valor por defecto del formulario). Si la consulta falla, se asume `false`: ofrecer un retiro que quizá no exista es peor que no ofrecerlo.
+
+  **Una guarda que no es obvia**: si el cliente tenía "pickup" elegido en el store (lo seleccionó antes de que el dueño desactivara la opción, y el estado sobrevive en memoria), un efecto lo devuelve a "delivery" -- si no, el checkout escondería los campos de dirección sin ninguna forma visible de recuperarlos.
+
+  **Panel**: `/admin/configuracion` → General gana una tarjeta "Entrega" con el interruptor, para que el día que ZURIK abra un local se prenda sin tocar código. Todo lo demás del flujo de retiro (el `CHECK` de `orders.delivery_method`, el manejo en `CheckoutSummary`, el mensaje de WhatsApp, el panel de Pedidos) quedó intacto.
+
+  **Verificado en vivo**: en `/checkout` ya no aparece "Retiro en tienda" ni "Método de entrega" en ningún lado, y los campos de dirección + el mapa de Leaflet siguen funcionando. Sin errores de consola. `tsc`, `lint` y `build` limpios.
+
+---
+
 
 ## 10. Reglas para futuras conversaciones
 

@@ -10,37 +10,52 @@ import { cn } from "@/lib/utils";
 export function ShippingInformation({
   values,
   onChange,
+  pickupEnabled,
 }: {
   values: Pick<
     CheckoutFormValues,
     "deliveryMethod" | "department" | "city" | "neighborhood" | "address" | "reference"
   >;
   onChange: CheckoutFieldChange;
+  /**
+   * `business_settings.pickup_enabled`, resuelto por `CheckoutForm`.
+   * `null` mientras se está cargando.
+   *
+   * Con el retiro apagado (el caso de una tienda sin local físico) no se
+   * muestra ningún selector: no tiene sentido pedirle a alguien que elija
+   * entre una sola opción. Durante la carga tampoco se muestra, para no
+   * hacer aparecer y desaparecer un control en la cara del cliente --
+   * "Delivery" ya es el valor por defecto del formulario.
+   */
+  pickupEnabled: boolean | null;
 }) {
   const t = siteConfig.checkoutPage.shippingInformation;
   const isPickup = values.deliveryMethod === "pickup";
+  const showMethodChoice = pickupEnabled === true;
 
   return (
     <section className="flex flex-col gap-5 rounded-2xl border border-border bg-card p-6">
       <h2 className="text-lg font-semibold text-foreground">{t.title}</h2>
 
-      <div className="flex flex-col gap-3">
-        <span className="text-sm font-medium text-foreground">{t.deliveryMethodLabel}</span>
-        <RadioGroup
-          value={values.deliveryMethod}
-          onValueChange={(value) => onChange("deliveryMethod", value as DeliveryMethod)}
-          className="flex flex-col gap-3 sm:flex-row sm:gap-6"
-        >
-          <label className="flex items-center gap-2 text-sm text-foreground">
-            <RadioGroupItem value="delivery" />
-            {t.deliveryOption}
-          </label>
-          <label className="flex items-center gap-2 text-sm text-foreground">
-            <RadioGroupItem value="pickup" />
-            {t.pickupOption}
-          </label>
-        </RadioGroup>
-      </div>
+      {showMethodChoice ? (
+        <div className="flex flex-col gap-3">
+          <span className="text-sm font-medium text-foreground">{t.deliveryMethodLabel}</span>
+          <RadioGroup
+            value={values.deliveryMethod}
+            onValueChange={(value) => onChange("deliveryMethod", value as DeliveryMethod)}
+            className="flex flex-col gap-3 sm:flex-row sm:gap-6"
+          >
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <RadioGroupItem value="delivery" />
+              {t.deliveryOption}
+            </label>
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <RadioGroupItem value="pickup" />
+              {t.pickupOption}
+            </label>
+          </RadioGroup>
+        </div>
+      ) : null}
 
       {/*
         "Retiro en tienda" oculta los campos de dirección sin desmontarlos:

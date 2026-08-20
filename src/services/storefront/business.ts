@@ -35,6 +35,7 @@ export type BusinessSettings = {
   mapDefaultLat: number;
   mapDefaultLng: number;
   mapDefaultZoom: number;
+  pickupEnabled: boolean;
   primaryColor: string | null;
   secondaryColor: string | null;
   accentColor: string | null;
@@ -62,6 +63,7 @@ type BusinessSettingsRow = {
   map_default_lat: number;
   map_default_lng: number;
   map_default_zoom: number;
+  pickup_enabled: boolean;
   primary_color: string | null;
   secondary_color: string | null;
   accent_color: string | null;
@@ -72,7 +74,7 @@ const BUSINESS_SETTINGS_SELECT = `
   whatsapp_number, whatsapp_default_message, whatsapp_product_inquiry_template,
   contact_email, contact_hours, contact_address,
   instagram_url, facebook_url, tiktok_url,
-  currency, locale, map_country, map_city, map_default_lat, map_default_lng, map_default_zoom,
+  currency, locale, map_country, map_city, map_default_lat, map_default_lng, map_default_zoom, pickup_enabled,
   primary_color, secondary_color, accent_color
 `;
 
@@ -99,6 +101,7 @@ function mapBusinessSettingsRow(row: BusinessSettingsRow): BusinessSettings {
     mapDefaultLat: Number(row.map_default_lat),
     mapDefaultLng: Number(row.map_default_lng),
     mapDefaultZoom: row.map_default_zoom,
+    pickupEnabled: row.pickup_enabled,
     primaryColor: row.primary_color,
     secondaryColor: row.secondary_color,
     accentColor: row.accent_color,

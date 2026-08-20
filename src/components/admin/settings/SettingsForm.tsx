@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/shared/FormField";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -443,6 +444,25 @@ export function SettingsForm() {
                 />
               </FormField>
             </div>
+          </SettingsSection>
+
+          <SettingsSection
+            title="Entrega"
+            description="Cómo puede recibir el pedido tu cliente."
+          >
+            <label className="flex items-start justify-between gap-6 rounded-xl border border-border p-4">
+              <span className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-foreground">Retiro en tienda</span>
+                <span className="text-sm text-muted-foreground">
+                  Activalo sólo si tenés un local físico donde el cliente pueda pasar a
+                  buscar el pedido. Apagado, el checkout ofrece únicamente Delivery.
+                </span>
+              </span>
+              <Switch
+                checked={form.pickupEnabled}
+                onCheckedChange={(checked) => update("pickupEnabled", checked)}
+              />
+            </label>
           </SettingsSection>
         </TabsContent>
 
