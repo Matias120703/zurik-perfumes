@@ -5,11 +5,56 @@ import type { CartLineItem } from "@/store/cart-store";
 
 const SECTION_DIVIDER = "━━━━━━━━━━━━━━━━";
 
+/**
+ * Bloque del método de pago. Cuando el método tiene instrucciones
+ * cargadas (datos bancarios, alias, billetera), se incluyen en el mensaje
+ * y se cierra pidiendo el comprobante.
+ *
+ * Importante: un link de wa.me **no puede adjuntar un archivo** -- eso lo
+ * decide siempre la persona desde su WhatsApp. Lo que sí se puede hacer,
+ * y es lo que hace esto, es dejar el pedido del comprobante escrito en el
+ * mismo chat donde el cliente ya está, junto a los datos a los que tiene
+ * que transferir.
+ */
+function buildPaymentLines(
+  payment: { name: string | null; instructions: string | null },
+  fallbackLabel: string
+): string[] {
+  const lines = [payment.name?.trim() || fallbackLabel];
+  const instructions = payment.instructions?.trim();
+
+  if (instructions) {
+    lines.push("", instructions, "", "📎 Adjuntá el comprobante del pago en este chat.");
+  }
+
+  return lines;
+}
+
 export type OrderWhatsAppMessageParams = {
   values: CheckoutFormValues;
   items: CartLineItem[];
   itemCount: number;
   subtotal: number;
+  /**
+   * Método de pago elegido, ya resuelto por `PaymentMethod` y guardado en
+   * `useCheckoutStore` -- este archivo no consulta `payment_methods`.
+   * `instructions` (datos bancarios) viaja en el mensaje para que el
+   * cliente los tenga a mano en el mismo chat donde va a mandar el
+   * comprobante, sin tener que volver a la web.
+   */
+  payment: {
+    name: string | null;
+    instructions: string | null;
+  };
+  /**
+   * Envío ya resuelto por `ShippingCitySelect`. `checked` distingue
+   * "todavía no eligió ciudad" de "eligió pero ninguna tarifa la cubre"
+   * (cost null en los dos casos), igual que en `useCheckoutStore`.
+   */
+  shipping: {
+    checked: boolean;
+    cost: number | null;
+  };
 };
 
 /**
@@ -24,12 +69,32 @@ export function buildOrderWhatsAppMessage({
   items,
   itemCount,
   subtotal,
+  payment,
+  shipping: shippingSelection,
 }: OrderWhatsAppMessageParams): string {
   const shipping = siteConfig.checkoutPage.shippingInformation;
-  const payment = siteConfig.checkoutPage.paymentMethod;
+  const paymentCopy = siteConfig.checkoutPage.paymentMethod;
   const summary = siteConfig.checkoutPage.summary;
   const isPickup = values.deliveryMethod === "pickup";
   const hasCoordinates = values.latitude !== null && values.longitude !== null;
+
+  /**
+   * Hasta este sprint el mensaje mostraba siempre el placeholder "Se
+   * calcula en el próximo paso" y un total igual al subtotal, aunque la
+   * pantalla y el pedido guardado en Supabase ya tuvieran el costo real
+   * desde el Sprint 6.2 (pendiente documentado: "NO modificar WhatsApp"
+   * era instrucción explícita de aquel sprint). Ahora los tres coinciden.
+   */
+  const showRealShipping = !isPickup && shippingSelection.checked;
+  const shippingCost = showRealShipping ? shippingSelection.cost : null;
+  const shippingLine = isPickup
+    ? shipping.pickupOption
+    : !showRealShipping
+      ? summary.shippingPlaceholder
+      : shippingCost !== null
+        ? formatPrice(shippingCost)
+        : shipping.shippingCostToConfirm;
+  const total = subtotal + (shippingCost ?? 0);
 
   const productLines = items.map((item) => {
     const itemSubtotal = item.product.price * item.quantity;
@@ -69,14 +134,11 @@ export function buildOrderWhatsAppMessage({
       "*RESUMEN*",
       `Cantidad total: ${itemCount}`,
       `Subtotal: ${formatPrice(subtotal)}`,
-      `Envío: ${summary.shippingPlaceholder}`,
-      `Total: ${formatPrice(subtotal)}`,
+      `Envío: ${shippingLine}`,
+      `Total: ${formatPrice(total)}`,
     ].join("\n"),
     ["*ENTREGA*", ...deliveryLines].join("\n"),
-    [
-      "*MÉTODO DE PAGO*",
-      values.paymentMethod === "cash" ? payment.cashOption : payment.transferOption,
-    ].join("\n"),
+    ["*MÉTODO DE PAGO*", ...buildPaymentLines(payment, paymentCopy.title)].join("\n"),
   ];
 
   if (values.notes.trim()) {

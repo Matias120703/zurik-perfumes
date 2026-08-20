@@ -33,14 +33,34 @@ export type ShippingSelection = {
   rateName: string | null;
 };
 
+/**
+ * Método de pago elegido, ya resuelto por `PaymentMethod` y guardado en
+ * `useCheckoutStore`. `id` puede ser null si la tienda todavía no tiene
+ * ningún método configurado -- en ese caso el pedido igual se crea y el
+ * pago se coordina por WhatsApp, que es lo que le decimos al cliente en
+ * el checkout.
+ */
+export type PaymentSelection = {
+  id: string | null;
+  name: string | null;
+};
+
+/**
+ * `orders.payment_method` es NOT NULL con un CHECK de "texto no vacío",
+ * así que necesita un valor incluso sin método configurado.
+ */
+const PAYMENT_TO_COORDINATE = "A coordinar";
+
 export async function createOrder(
   values: CheckoutFormValues,
   items: CartLineItem[],
   subtotal: number,
   whatsappMessage: string,
-  shipping: ShippingSelection | null
+  shipping: ShippingSelection | null,
+  payment: PaymentSelection
 ): Promise<CreateOrderResult> {
   const supabase = createClient();
+  const paymentName = payment.name?.trim() || PAYMENT_TO_COORDINATE;
 
   // Sprint 6.2: el total pasa a incluir el costo de envío real (0 si no
   // aplica -- Retiro en tienda, o ciudad sin tarifa configurada todavía).
@@ -52,7 +72,9 @@ export async function createOrder(
     p_phone: values.phone,
     p_email: values.email || null,
     p_delivery_method: values.deliveryMethod,
-    p_payment_method: values.paymentMethod,
+    // Se guarda el NOMBRE del método (no su id) para que el panel lo
+    // muestre legible sin ningún join, igual que `shipping_rate_name`.
+    p_payment_method: paymentName,
     p_department: values.deliveryMethod === "delivery" ? values.department : null,
     p_city: values.deliveryMethod === "delivery" ? values.city : null,
     p_neighborhood: values.deliveryMethod === "delivery" ? values.neighborhood : null,
@@ -74,6 +96,8 @@ export async function createOrder(
     p_shipping_cost: shipping?.cost ?? null,
     p_shipping_rate_id: shipping?.rateId ?? null,
     p_shipping_rate_name: shipping?.rateName ?? null,
+    p_payment_method_id: payment.id || null,
+    p_payment_method_name: paymentName,
   });
 
   if (error) throw new Error(error.message);

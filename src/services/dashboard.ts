@@ -53,12 +53,28 @@ export type DashboardStatusBreakdown = {
   count: number;
 };
 
+/**
+ * Señales de "¿la tienda ya está lista para vender?", usadas por la guía
+ * de puesta en marcha que /admin muestra mientras no haya pedidos.
+ *
+ * Se calculan igual que el resto del Dashboard -- consultando en el
+ * momento, nunca guardando un estado de "paso completado". Un tilde
+ * guardado se desincroniza en cuanto alguien borra la última foto o la
+ * última tarifa de envío; una consulta no puede mentir.
+ */
+export type DashboardSetup = {
+  hasProductPhotos: boolean;
+  hasHomeContent: boolean;
+  hasShippingRates: boolean;
+};
+
 export type DashboardData = {
   summary: DashboardSummary;
   sales: DashboardSales;
   recentOrders: DashboardRecentOrder[];
   topProducts: DashboardTopProduct[];
   statusBreakdown: DashboardStatusBreakdown[];
+  setup: DashboardSetup;
 };
 
 type OrderAggregateRow = {
@@ -112,6 +128,36 @@ async function getActiveCount(table: "products" | "categories"): Promise<number>
     .eq("is_active", true);
   if (error) throw new Error(error.message);
   return count ?? 0;
+}
+
+/**
+ * Las tres señales de la guía de puesta en marcha, en una sola pasada.
+ * Cada consulta pide `head: true` con `limit(1)`: sólo interesa si existe
+ * al menos una fila, nunca su contenido.
+ */
+async function getSetupSignals(): Promise<DashboardSetup> {
+  const supabase = createClient();
+
+  const [photos, homeContent, shipping] = await Promise.all([
+    supabase
+      .from("product_images")
+      .select("id", { count: "exact", head: true })
+      .like("url", "http%"),
+    supabase.from("home_content").select("hero_title").eq("id", 1).maybeSingle(),
+    supabase.from("shipping_rates").select("id", { count: "exact", head: true }),
+  ]);
+
+  return {
+    /**
+     * Una fila en `product_images` puede ser todavía un placeholder del
+     * seed (ruta relativa, nunca un archivo real) -- por eso se exige una
+     * URL absoluta de Storage, el mismo criterio que `isRealImageUrl`
+     * usa en la tienda para decidir si muestra la foto o el placeholder.
+     */
+    hasProductPhotos: (photos.count ?? 0) > 0,
+    hasHomeContent: Boolean(homeContent.data?.hero_title?.trim()),
+    hasShippingRates: (shipping.count ?? 0) > 0,
+  };
 }
 
 async function getCustomerCount(): Promise<number> {
@@ -181,15 +227,23 @@ async function getTopProducts(): Promise<DashboardTopProduct[]> {
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
-  const [orderRows, activeProducts, activeCategories, totalCustomers, recentOrders, topProducts] =
-    await Promise.all([
-      getOrderAggregates(),
-      getActiveCount("products"),
-      getActiveCount("categories"),
-      getCustomerCount(),
-      getRecentOrders(),
-      getTopProducts(),
-    ]);
+  const [
+    orderRows,
+    activeProducts,
+    activeCategories,
+    totalCustomers,
+    recentOrders,
+    topProducts,
+    setup,
+  ] = await Promise.all([
+    getOrderAggregates(),
+    getActiveCount("products"),
+    getActiveCount("categories"),
+    getCustomerCount(),
+    getRecentOrders(),
+    getTopProducts(),
+    getSetupSignals(),
+  ]);
 
   const totalOrders = orderRows.length;
   const totalSales = orderRows.reduce((sum, order) => sum + Number(order.total), 0);
@@ -229,5 +283,6 @@ export async function getDashboardData(): Promise<DashboardData> {
       label: option.label,
       count: countByStatus.get(option.value) ?? 0,
     })),
+    setup,
   };
 }

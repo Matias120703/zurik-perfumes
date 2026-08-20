@@ -2,7 +2,9 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 
-import { categories } from "@/config/categories";
+import Image from "next/image";
+
+import { isRealImageUrl } from "@/lib/products";
 import { siteConfig } from "@/config/site";
 import { sectionContainerVariants, sectionItemVariants } from "@/lib/motion";
 import { formatPrice } from "@/lib/utils";
@@ -50,32 +52,35 @@ export function CheckoutSummary() {
 
       <motion.div variants={sectionItemVariants} className="flex flex-col gap-4">
         {items.map((item) => {
-          const category = categories.find((c) => c.slug === item.product.category);
+          /*
+            Misma corrección que en CartItem: acá también se mostraba
+            siempre el placeholder, incluso con foto real cargada. Ver el
+            comentario largo en `CartItem.tsx` para el porqué.
+          */
+          const primaryImage = item.product.images.find(isRealImageUrl);
 
           return (
             <div key={item.product.id} className="flex items-center gap-3">
-              {/*
-                item.product.images queda reservado para la foto real.
-                Mismo placeholder de diseño que el resto de la tienda.
-              */}
               <div className="relative size-14 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/60">
-                <div
-                  className="absolute inset-0"
-                  style={
-                    category?.accentColor
-                      ? {
-                          backgroundImage: `radial-gradient(130% 100% at 100% 0%, ${category.accentColor}29, transparent 60%)`,
-                        }
-                      : undefined
-                  }
-                />
-                <div
-                  className="absolute inset-0 text-foreground opacity-[0.12]"
-                  style={{
-                    backgroundImage: "radial-gradient(currentColor 1px, transparent 1px)",
-                    backgroundSize: "10px 10px",
-                  }}
-                />
+                {primaryImage ? (
+                  <Image
+                    src={primaryImage}
+                    alt={item.product.name}
+                    fill
+                    sizes="56px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <>
+                    <div className="absolute inset-0 bg-[radial-gradient(120%_100%_at_50%_0%,color-mix(in_oklab,var(--gold)_14%,transparent),transparent_65%)]" />
+                    <span
+                      aria-hidden="true"
+                      className="font-display absolute inset-0 flex items-center justify-center text-lg leading-none font-semibold text-[var(--gold)]/30 select-none"
+                    >
+                      {item.product.name.charAt(0)}
+                    </span>
+                  </>
+                )}
               </div>
 
               <div className="flex flex-1 flex-col">

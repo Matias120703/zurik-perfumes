@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 
 import { CategoryCard } from "@/components/storefront/CategoryCard";
+import { SectionHeading } from "@/components/storefront/SectionHeading";
 import type { Category } from "@/config/categories";
 import { siteConfig } from "@/config/site";
 import { sectionContainerVariants as container } from "@/lib/motion";
@@ -17,16 +18,13 @@ export function FeaturedCategories({ categories }: { categories: Category[] }) {
   const { eyebrow, title, subtitle } = siteConfig.featuredCategoriesSection;
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-20 lg:py-24">
-      <div className="flex flex-col gap-3">
-        <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          {eyebrow}
-        </span>
-        <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          {title}
-        </h2>
-        <p className="max-w-md text-muted-foreground">{subtitle}</p>
-      </div>
+    <section className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
+      <SectionHeading
+        eyebrow={eyebrow}
+        title={title}
+        subtitle={subtitle}
+        action={{ label: "Ver todas las marcas", href: "/categorias" }}
+      />
 
       <motion.div
         initial={shouldReduceMotion ? "show" : "hidden"}

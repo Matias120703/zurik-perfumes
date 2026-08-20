@@ -1,15 +1,20 @@
 "use client";
 
+import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Minus, Plus, X } from "lucide-react";
 
-import { categories } from "@/config/categories";
+import { isRealImageUrl } from "@/lib/products";
 import { useCartStore, type CartLineItem } from "@/store/cart-store";
 import { formatPrice } from "@/lib/utils";
 
 export function CartItem({ item }: { item: CartLineItem }) {
   const { product, quantity } = item;
-  const category = categories.find((c) => c.slug === product.category);
+  const [imageFailed, setImageFailed] = useState(false);
+  const primaryImage = product.images.find(isRealImageUrl);
+  const showImage = Boolean(primaryImage) && !imageFailed;
   const incrementQuantity = useCartStore((state) => state.incrementQuantity);
   const decrementQuantity = useCartStore((state) => state.decrementQuantity);
   const removeProduct = useCartStore((state) => state.removeProduct);
@@ -24,35 +29,44 @@ export function CartItem({ item }: { item: CartLineItem }) {
       className="flex gap-4 border-b border-border py-6 first:pt-0 last:border-b-0"
     >
       {/*
-        product.images queda reservado para cuando haya foto real del
-        cliente. Mismo placeholder de diseño que el resto de la tienda,
-        a menor escala.
+        La foto real del producto -- hasta este sprint el carrito mostraba
+        SIEMPRE el placeholder decorativo, aunque el producto tuviera una
+        foto subida desde el panel: es el mismo bug que la Fase 12
+        corrigió en ProductCard/ProductGallery, que nunca se había
+        aplicado acá (ni en CheckoutSummary) porque Carrito y Checkout
+        estuvieron protegidos en todos los sprints posteriores.
+
+        Encima, el tinte de color venía de un `categories.find()` contra
+        `config/categories.ts`, cuyos slugs son los del cliente anterior
+        del engine -- para ZURIK nunca encontraba nada, así que el
+        recuadro quedaba gris plano. Ese import se eliminó: el placeholder
+        ahora usa el mismo monograma dorado del resto de la tienda.
       */}
-      <div className="relative size-24 shrink-0 overflow-hidden rounded-xl border border-border bg-muted/60 sm:size-28">
-        <div
-          className="absolute inset-0"
-          style={
-            category?.accentColor
-              ? {
-                  backgroundImage: `radial-gradient(130% 100% at 100% 0%, ${category.accentColor}29, transparent 60%)`,
-                }
-              : undefined
-          }
-        />
-        <div
-          className="absolute inset-0 text-foreground opacity-[0.12]"
-          style={{
-            backgroundImage: "radial-gradient(currentColor 1px, transparent 1px)",
-            backgroundSize: "14px 14px",
-          }}
-        />
-        <span
-          aria-hidden="true"
-          className="absolute -right-2 -bottom-3 text-5xl leading-none font-bold text-foreground/[0.08] select-none"
-        >
-          {product.name.charAt(0)}
-        </span>
-      </div>
+      <Link
+        href={`/productos/${product.slug}`}
+        className="relative size-24 shrink-0 overflow-hidden rounded-xl border border-border bg-muted/60 transition-colors hover:border-[var(--gold)]/40 sm:size-28"
+      >
+        {showImage ? (
+          <Image
+            src={primaryImage!}
+            alt={product.name}
+            fill
+            sizes="112px"
+            className="object-cover"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-[radial-gradient(120%_100%_at_50%_0%,color-mix(in_oklab,var(--gold)_14%,transparent),transparent_65%)]" />
+            <span
+              aria-hidden="true"
+              className="font-display absolute inset-0 flex items-center justify-center text-3xl leading-none font-semibold text-[var(--gold)]/30 select-none"
+            >
+              {product.name.charAt(0)}
+            </span>
+          </>
+        )}
+      </Link>
 
       <div className="flex flex-1 flex-col gap-1">
         <div className="flex items-start justify-between gap-3">
@@ -60,9 +74,9 @@ export function CartItem({ item }: { item: CartLineItem }) {
             <h3 className="text-sm font-semibold text-foreground sm:text-base">
               {product.name}
             </h3>
-            {category ? (
-              <p className="text-xs text-muted-foreground sm:text-sm">{category.name}</p>
-            ) : null}
+            <p className="text-xs text-muted-foreground sm:text-sm">
+              {formatPrice(product.price)} c/u
+            </p>
           </div>
 
           <button

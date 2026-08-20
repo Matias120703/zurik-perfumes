@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { OrderStatusSelect } from "@/components/admin/orders/OrderStatusSelect";
 import { useOrder } from "@/hooks/useOrder";
 import { formatDate, formatPrice, getGoogleMapsUrl } from "@/lib/utils";
+import { getOrderPaymentLabel } from "@/lib/payment-methods";
 
 const DELIVERY_METHOD_LABEL = { delivery: "Delivery", pickup: "Retiro en tienda" } as const;
-const PAYMENT_METHOD_LABEL = { transfer: "Transferencia bancaria", cash: "Efectivo" } as const;
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -174,7 +174,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
 
           <Section title="Pago">
             <p className="text-sm font-medium text-foreground">
-              {PAYMENT_METHOD_LABEL[order.paymentMethod]}
+              {getOrderPaymentLabel(order)}
             </p>
           </Section>
         </div>

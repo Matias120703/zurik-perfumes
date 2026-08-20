@@ -10,9 +10,9 @@ import { getOrderStatusVariant } from "@/components/admin/orders/order-status";
 import { useCustomer } from "@/hooks/useCustomer";
 import { formatDate, formatPrice } from "@/lib/utils";
 import { ORDER_STATUSES } from "@/services/orders";
+import { getOrderPaymentLabel } from "@/lib/payment-methods";
 
 const DELIVERY_METHOD_LABEL = { delivery: "Delivery", pickup: "Retiro en tienda" } as const;
-const PAYMENT_METHOD_LABEL = { transfer: "Transferencia bancaria", cash: "Efectivo" } as const;
 const STATUS_LABEL = Object.fromEntries(ORDER_STATUSES.map((s) => [s.value, s.label]));
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -124,7 +124,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                           {DELIVERY_METHOD_LABEL[order.deliveryMethod]}
                         </td>
                         <td className="py-3 pr-4 text-muted-foreground">
-                          {PAYMENT_METHOD_LABEL[order.paymentMethod]}
+                          {getOrderPaymentLabel(order)}
                         </td>
                         <td className="py-3 text-right">
                           <Button

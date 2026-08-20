@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "../globals.css";
 
+import { AnnouncementBar } from "@/components/storefront/AnnouncementBar";
+import { FloatingWhatsApp } from "@/components/storefront/FloatingWhatsApp";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { getStorefrontThemeStyle } from "@/lib/theme";
 import { getPublicBusinessSettings } from "@/services/storefront/business";
+import { getPublicHomeContent } from "@/services/storefront/home-content";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,6 +18,17 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+/**
+ * Serif editorial de los títulos (ver `globals.css`, `.storefront-theme`).
+ * Sólo se carga en el layout de la tienda -- el panel administrativo no
+ * la usa y no tiene por qué pagar su descarga.
+ */
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 /**
@@ -50,7 +64,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const settings = await getPublicBusinessSettings();
+  const [settings, homeContent] = await Promise.all([
+    getPublicBusinessSettings(),
+    getPublicHomeContent(),
+  ]);
 
   /**
    * Tema de marca ("Colores del tema", /admin/configuracion -> Apariencia):
@@ -73,13 +90,18 @@ export default async function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} storefront-theme`}
       style={themeStyle}
     >
       <body className="antialiased">
-        <Header settings={settings} />
+        <AnnouncementBar
+          enabled={homeContent.announcementEnabled}
+          messages={homeContent.announcementMessages}
+        />
+        <Header settings={settings} homeContent={homeContent} />
         {children}
         <Footer settings={settings} />
+        <FloatingWhatsApp settings={settings} />
       </body>
     </html>
   );

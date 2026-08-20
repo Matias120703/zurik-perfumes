@@ -36,11 +36,18 @@ export function Footer({ settings }: { settings: BusinessSettings }) {
   const socialLinks = getSocialLinks(settings);
 
   return (
-    <footer className="border-t border-border bg-background">
+    <footer className="relative border-t border-border bg-background">
+      {/* Filete dorado al tope: cierra la página con el mismo recurso
+          gráfico que separa las secciones. */}
+      <div aria-hidden="true" className="rule-gold absolute inset-x-0 top-0 h-px opacity-50" />
+
       <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
         <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] lg:gap-8">
           <div className="flex flex-col gap-4">
-            <Link href="/" className="w-fit text-xl font-bold tracking-tight text-foreground">
+            <Link
+              href="/"
+              className="font-display w-fit text-xl font-semibold tracking-[0.18em] text-foreground uppercase"
+            >
               {settings.storeName}
             </Link>
             <p className="max-w-xs text-sm text-muted-foreground">
@@ -56,7 +63,7 @@ export function Footer({ settings }: { settings: BusinessSettings }) {
                   aria-label={social.label}
                   whileHover={{ scale: 1.1 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="flex size-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:text-foreground"
+                  className="flex size-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-[var(--gold)]/50 hover:text-[var(--gold)]"
                 >
                   <social.icon className="size-4" />
                 </motion.a>

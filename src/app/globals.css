@@ -11,6 +11,11 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
+  /* Serif editorial de la tienda pública (Playfair Display, cargada en
+     `(storefront)/layout.tsx`). Genera la utilidad `font-display`, usada
+     sólo en títulos de sección y del hero -- el cuerpo de texto sigue con
+     la sans de siempre, que es más legible en párrafos y en el panel. */
+  --font-display: var(--font-playfair);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -146,6 +151,67 @@
   --brand-accent-foreground: var(--primary-foreground);
 }
 
+/* ============================================================
+   Tema ZURIK -- negro carbón + dorado
+   ============================================================
+   Se aplica como clase en el <html> de `app/(storefront)/layout.tsx`,
+   NO en `:root`. Motivo: los dos root layouts del proyecto (tienda y
+   panel) comparten este mismo archivo -- si el tema oscuro viviera en
+   `:root`, el panel administrativo se volvería oscuro también, y ahí lo
+   que importa es leer tablas y formularios densos, no la puesta en
+   escena de una boutique. Con la clase, la tienda se vuelve oscura y el
+   panel queda exactamente como estaba.
+
+   Los `--brand-*` (la capa de "color de marca" que un admin puede
+   sobreescribir desde /admin/configuracion -> Apariencia) siguen
+   ganándole a esto cuando hay un color cargado: `getStorefrontThemeStyle`
+   los inyecta como `style` inline en el mismo <html>, y un estilo inline
+   tiene más prioridad que cualquier clase. Es el orden correcto: si el
+   dueño de la tienda eligió un color, ese manda sobre el default.
+   ============================================================ */
+.storefront-theme {
+  --background: oklch(0.145 0.006 60);
+  --foreground: oklch(0.968 0.004 85);
+
+  --card: oklch(0.188 0.007 60);
+  --card-foreground: oklch(0.968 0.004 85);
+  --popover: oklch(0.188 0.007 60);
+  --popover-foreground: oklch(0.968 0.004 85);
+
+  --primary: oklch(0.968 0.004 85);
+  --primary-foreground: oklch(0.16 0.008 60);
+  --secondary: oklch(0.245 0.008 60);
+  --secondary-foreground: oklch(0.968 0.004 85);
+
+  --muted: oklch(0.235 0.008 60);
+  --muted-foreground: oklch(0.72 0.012 75);
+  --accent: oklch(0.245 0.008 60);
+  --accent-foreground: oklch(0.968 0.004 85);
+
+  --destructive: oklch(0.68 0.19 25);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.78 0.125 85);
+
+  /* Dorado de marca. Un solo lugar donde se define -- todo lo demás lo
+     consume por `var()`, para que cambiarlo sea un cambio de una línea. */
+  --gold: oklch(0.78 0.125 85);
+  --gold-soft: oklch(0.87 0.085 88);
+  --gold-deep: oklch(0.62 0.11 82);
+  --gold-foreground: oklch(0.16 0.01 60);
+
+  /* Los tres tokens de marca apuntan al dorado por defecto: botones
+     principales, badges de descuento y acentos de la tienda. */
+  --brand-primary: var(--gold);
+  --brand-primary-foreground: var(--gold-foreground);
+  --brand-secondary: oklch(0.245 0.008 60);
+  --brand-secondary-foreground: var(--foreground);
+  --brand-accent: var(--gold);
+  --brand-accent-foreground: var(--gold-foreground);
+
+  --radius: 0.75rem;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -156,4 +222,30 @@
   html {
     @apply font-sans;
   }
+
+  /*
+    Sólo dentro de la tienda: los títulos usan la serif editorial. Se
+    define como regla de base (y no clase por clase en cada componente)
+    para que ninguna sección nueva se olvide de aplicarla y quede
+    visualmente fuera de sistema.
+  */
+  .storefront-theme h1,
+  .storefront-theme h2,
+  .storefront-theme .font-display {
+    font-family: var(--font-playfair), ui-serif, Georgia, serif;
+  }
+}
+
+@utility text-gold {
+  color: var(--gold);
+}
+
+/* Filete dorado con degradado -- separador recurrente entre secciones. */
+@utility rule-gold {
+  background-image: linear-gradient(
+    to right,
+    transparent,
+    var(--gold) 50%,
+    transparent
+  );
 }

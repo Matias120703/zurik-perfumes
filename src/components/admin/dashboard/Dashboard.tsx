@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { OrderStatusBreakdown } from "@/components/admin/dashboard/OrderStatusBreakdown";
 import { RecentOrdersTable } from "@/components/admin/dashboard/RecentOrdersTable";
 import { SalesChart } from "@/components/admin/dashboard/SalesChart";
+import { SetupChecklist } from "@/components/admin/dashboard/SetupChecklist";
 import { SummaryCard } from "@/components/admin/dashboard/SummaryCard";
 import { TopProductsList } from "@/components/admin/dashboard/TopProductsList";
 import { useDashboard } from "@/hooks/useDashboard";
@@ -70,7 +71,17 @@ export function Dashboard() {
     return <p className="text-sm text-muted-foreground">Cargando dashboard...</p>;
   }
 
-  const { summary, sales, recentOrders, topProducts, statusBreakdown } = data;
+  const { summary, sales, recentOrders, topProducts, statusBreakdown, setup } = data;
+
+  /**
+   * Sin ningún pedido todavía, las métricas de venta son seis ceros y dos
+   * gráficos vacíos -- se leen como un panel roto, no como una tienda
+   * nueva. Mientras eso pase, /admin muestra la guía de puesta en marcha
+   * en su lugar y esconde las secciones que sólo tienen sentido con
+   * ventas reales. Apenas entra el primer pedido, el dashboard vuelve a
+   * ser el de siempre, sin que nadie tenga que cambiar nada.
+   */
+  const hasOrders = summary.totalOrders > 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -80,6 +91,8 @@ export function Dashboard() {
           Resumen del negocio, calculado en el momento a partir de los datos reales de Supabase.
         </p>
       </div>
+
+      {!hasOrders ? <SetupChecklist summary={summary} setup={setup} /> : null}
 
       <div
         className="grid grid-cols-1 gap-4 duration-500 animate-in fade-in slide-in-from-bottom-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
@@ -125,6 +138,7 @@ export function Dashboard() {
         />
       </div>
 
+      {!hasOrders ? null : (
       <Section title="Ventas" delay={100}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <SummaryCard
@@ -155,20 +169,25 @@ export function Dashboard() {
           <SalesChart orders={recentOrders} />
         </div>
       </Section>
+      )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
-        <Section title="Últimos pedidos" delay={150}>
-          <RecentOrdersTable orders={recentOrders} />
-        </Section>
+      {hasOrders ? (
+        <>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+            <Section title="Últimos pedidos" delay={150}>
+              <RecentOrdersTable orders={recentOrders} />
+            </Section>
 
-        <Section title="Estados de pedidos" delay={200}>
-          <OrderStatusBreakdown breakdown={statusBreakdown} />
-        </Section>
-      </div>
+            <Section title="Estados de pedidos" delay={200}>
+              <OrderStatusBreakdown breakdown={statusBreakdown} />
+            </Section>
+          </div>
 
-      <Section title="Productos más vendidos" delay={250}>
-        <TopProductsList products={topProducts} />
-      </Section>
+          <Section title="Productos más vendidos" delay={250}>
+            <TopProductsList products={topProducts} />
+          </Section>
+        </>
+      ) : null}
     </div>
   );
 }

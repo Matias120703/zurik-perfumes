@@ -35,6 +35,22 @@ type CheckoutState = {
    * departamento/ciudad (mientras se resuelve la nueva búsqueda) o al
    * pasar a "Retiro en tienda". */
   resetShipping: () => void;
+
+  /**
+   * Nombre e instrucciones del método de pago elegido. `values.paymentMethod`
+   * guarda sólo el id; estos dos son el snapshot legible que necesitan la
+   * pantalla de confirmación, el mensaje de WhatsApp y el pedido guardado
+   * en Supabase -- ninguno de los tres puede volver a consultar
+   * `payment_methods` por su cuenta. Mismo patrón que `shippingRateName`:
+   * un dato que resuelve un componente del formulario y que el resto del
+   * flujo consume ya resuelto.
+   */
+  paymentMethodName: string | null;
+  paymentMethodInstructions: string | null;
+  setPaymentMethodDetails: (details: {
+    name: string | null;
+    instructions: string | null;
+  }) => void;
 };
 
 /**
@@ -75,5 +91,14 @@ export const useCheckoutStore = create<CheckoutState>((set) => ({
       shippingRateName: null,
       shippingCost: null,
       shippingEstimatedDays: null,
+    }),
+
+  paymentMethodName: null,
+  paymentMethodInstructions: null,
+
+  setPaymentMethodDetails: (details) =>
+    set({
+      paymentMethodName: details.name,
+      paymentMethodInstructions: details.instructions,
     }),
 }));

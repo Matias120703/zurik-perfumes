@@ -16,9 +16,9 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { OrderStatusSelect } from "@/components/admin/orders/OrderStatusSelect";
 import { ORDER_SORT_OPTIONS, ORDER_STATUS_FILTER_OPTIONS, useOrders } from "@/hooks/useOrders";
 import { formatDate, formatPrice } from "@/lib/utils";
+import { getOrderPaymentLabel } from "@/lib/payment-methods";
 
 const DELIVERY_METHOD_LABEL = { delivery: "Delivery", pickup: "Retiro en tienda" } as const;
-const PAYMENT_METHOD_LABEL = { transfer: "Transferencia", cash: "Efectivo" } as const;
 
 /** Mismo layout que ProductsTable/CategoriesTable: header + buscador +
  * filtro + orden + tabla + acciones. Sin paginación real todavía --
@@ -145,7 +145,7 @@ export function OrdersTable() {
                       {DELIVERY_METHOD_LABEL[order.deliveryMethod]}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {PAYMENT_METHOD_LABEL[order.paymentMethod]}
+                      {getOrderPaymentLabel(order)}
                     </td>
                     <td className="px-4 py-3">
                       <OrderStatusSelect

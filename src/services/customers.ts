@@ -42,7 +42,8 @@ export type AdminCustomerOrderSummary = {
   status: OrderStatus;
   total: number;
   deliveryMethod: "delivery" | "pickup";
-  paymentMethod: "transfer" | "cash";
+  paymentMethod: string;
+  paymentMethodName: string | null;
 };
 
 export type AdminCustomerStats = {
@@ -128,7 +129,8 @@ type CustomerDetailOrderRow = {
   status: OrderStatus;
   total: number;
   delivery_method: "delivery" | "pickup";
-  payment_method: "transfer" | "cash";
+  payment_method: string;
+  payment_method_name: string | null;
   department: string | null;
   city: string | null;
   neighborhood: string | null;
@@ -151,7 +153,7 @@ export async function getCustomerById(id: string): Promise<AdminCustomerDetail |
   const { data: orderRows, error: ordersError } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, total, delivery_method, payment_method, department, city, neighborhood, address, created_at"
+      "id, order_number, status, total, delivery_method, payment_method, payment_method_name, department, city, neighborhood, address, created_at"
     )
     .eq("customer_id", id)
     .order("created_at", { ascending: false });
@@ -168,6 +170,7 @@ export async function getCustomerById(id: string): Promise<AdminCustomerDetail |
     total: Number(order.total),
     deliveryMethod: order.delivery_method,
     paymentMethod: order.payment_method,
+    paymentMethodName: order.payment_method_name,
   }));
 
   const totalSpent = orders.reduce((sum, order) => sum + Number(order.total), 0);

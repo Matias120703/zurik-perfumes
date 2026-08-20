@@ -66,6 +66,7 @@ export function OrderConfirmationDetails({ values }: { values: CheckoutFormValue
   // Nombrada `shippingSelection` (no `shipping`, ya usado más abajo para
   // `siteConfig.checkoutPage.shippingInformation`) para no chocar con esa
   // declaración existente.
+  const shippingChecked = useCheckoutStore((state) => state.shippingChecked);
   const shippingCost = useCheckoutStore((state) => state.shippingCost);
   const shippingRateId = useCheckoutStore((state) => state.shippingRateId);
   const shippingRateName = useCheckoutStore((state) => state.shippingRateName);
@@ -73,6 +74,14 @@ export function OrderConfirmationDetails({ values }: { values: CheckoutFormValue
   const shippingSelection = isPickup
     ? null
     : { cost: shippingCost, rateId: shippingRateId, rateName: shippingRateName };
+
+  // Método de pago (nombre + instrucciones), resuelto por PaymentMethod en
+  // /checkout y guardado en el store -- acá sólo se lee, ni se consulta
+  // `payment_methods` ni se decide nada.
+  const paymentMethodName = useCheckoutStore((state) => state.paymentMethodName);
+  const paymentMethodInstructions = useCheckoutStore(
+    (state) => state.paymentMethodInstructions
+  );
 
   // El número de WhatsApp viene de business_settings (Supabase), no de
   // config/business.ts -- esta página es "use client" de punta a punta
@@ -94,7 +103,14 @@ export function OrderConfirmationDetails({ values }: { values: CheckoutFormValue
   // la vista del cliente. El pedido en sí, desde el Sprint 5.6, ya queda
   // registrado en Supabase antes de este paso -- lo que no se persiste es
   // la señal de "efectivamente se mandó por WhatsApp".
-  const whatsappMessageParams = { values, items, itemCount, subtotal };
+  const whatsappMessageParams = {
+    values,
+    items,
+    itemCount,
+    subtotal,
+    payment: { name: paymentMethodName, instructions: paymentMethodInstructions },
+    shipping: { checked: !isPickup && shippingChecked, cost: shippingCost },
+  };
   const whatsappMessage = buildOrderWhatsAppMessage(whatsappMessageParams);
   const whatsappUrl = whatsappNumber ? getOrderWhatsAppUrl(whatsappMessageParams, whatsappNumber) : "";
 
@@ -132,7 +148,10 @@ export function OrderConfirmationDetails({ values }: { values: CheckoutFormValue
     const whatsappTab = window.open("", "_blank");
 
     try {
-      await createOrder(values, items, subtotal, whatsappMessage, shippingSelection);
+      await createOrder(values, items, subtotal, whatsappMessage, shippingSelection, {
+        id: values.paymentMethod || null,
+        name: paymentMethodName,
+      });
       setOrderSaved(true);
       if (whatsappTab) {
         whatsappTab.location.href = whatsappUrl;
@@ -210,9 +229,33 @@ export function OrderConfirmationDetails({ values }: { values: CheckoutFormValue
       </ReviewSection>
 
       <ReviewSection title={payment.title}>
-        <p className="text-sm font-medium text-foreground">
-          {values.paymentMethod === "cash" ? payment.cashOption : payment.transferOption}
-        </p>
+        <div className="flex flex-col gap-3">
+          <p className="text-sm font-medium text-foreground">
+            {paymentMethodName ?? "Se coordina por WhatsApp"}
+          </p>
+
+          {/*
+            Los datos de pago se repiten acá (además de en /checkout)
+            porque esta es la última pantalla antes de confirmar: quien
+            llegó hasta acá ya decidió, y es el momento en que va a abrir
+            la app del banco. Vuelven a viajar en el mensaje de WhatsApp,
+            así que el cliente los tiene en los tres lugares.
+          */}
+          {paymentMethodInstructions?.trim() ? (
+            <div className="flex flex-col gap-2 rounded-xl border border-[var(--gold)]/30 bg-[color-mix(in_oklab,var(--gold)_8%,transparent)] p-4">
+              <p className="text-xs font-semibold tracking-wide text-[var(--gold)] uppercase">
+                Datos para el pago
+              </p>
+              <p className="text-sm whitespace-pre-wrap text-foreground/90">
+                {paymentMethodInstructions.trim()}
+              </p>
+              <p className="border-t border-[var(--gold)]/20 pt-2 text-xs text-muted-foreground">
+                Al confirmar se abre WhatsApp con estos datos. Adjuntá ahí el comprobante del
+                pago para que preparemos tu pedido.
+              </p>
+            </div>
+          ) : null}
+        </div>
       </ReviewSection>
 
       {values.notes.trim() ? (

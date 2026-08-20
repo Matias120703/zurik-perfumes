@@ -145,10 +145,30 @@ export function getProductDisplayPrice(
     };
   }
 
-  const legacyDiscountPercent = product.oldPrice
-    ? Math.round((1 - product.price / product.oldPrice) * 100)
-    : null;
-  const isLegacyOnSale = product.onSale && Boolean(legacyDiscountPercent);
+  const legacyDiscountPercent =
+    product.oldPrice && product.oldPrice > product.price
+      ? Math.round((1 - product.price / product.oldPrice) * 100)
+      : null;
+
+  /**
+   * Bug encontrado en el rediseño de ZURIK: hasta acá, el descuento
+   * legacy exigía `product.onSale`, pero esa columna (`products.on_sale`)
+   * NO es editable desde el panel -- ni `ProductForm.tsx` ni
+   * `services/products.ts` la escriben nunca, así que queda en `false`
+   * para todo producto cargado por un admin. Resultado: cargar un
+   * "Precio anterior" mostraba el precio tachado pero jamás el badge de
+   * descuento, y la sección de Ofertas quedaba vacía aunque hubiera
+   * productos rebajados.
+   *
+   * La condición real de "está rebajado" es que exista un precio
+   * anterior mayor al actual -- que es, además, exactamente lo que
+   * `ProductForm` ya valida al guardar ("el precio anterior debe ser
+   * mayor al precio actual"). `onSale` deja de participar de la
+   * decisión: una fila con `on_sale = true` pero sin `old_price` no
+   * tiene ningún porcentaje que mostrar, así que nunca podía generar un
+   * badge por sí sola.
+   */
+  const isLegacyOnSale = legacyDiscountPercent !== null && legacyDiscountPercent > 0;
 
   return {
     price: product.price,

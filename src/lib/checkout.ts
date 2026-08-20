@@ -1,5 +1,14 @@
 export type DeliveryMethod = "delivery" | "pickup";
-export type PaymentMethodValue = "transfer" | "cash";
+
+/**
+ * El id del método elegido en `payment_methods` (Supabase). Antes eran
+ * dos literales fijos ("transfer" | "cash") porque los dos únicos
+ * métodos vivían hardcodeados en el componente; ahora los administra el
+ * dueño desde /admin/pagos, así que el valor es el id de la fila.
+ * Arranca vacío hasta que `PaymentMethod` termina de cargar la lista y
+ * selecciona el primero.
+ */
+export type PaymentMethodValue = string;
 
 export type CheckoutFormValues = {
   firstName: string;
@@ -32,7 +41,7 @@ export const initialCheckoutFormValues: CheckoutFormValues = {
   reference: "",
   latitude: null,
   longitude: null,
-  paymentMethod: "transfer",
+  paymentMethod: "",
   notes: "",
 };
 

@@ -79,7 +79,7 @@ export function ProductCard({
         diseño de siempre (mismo lenguaje visual que Hero y Categorías)
         tintado con el accentColor de su categoría.
       */}
-      <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 ease-out hover:border-foreground/15 hover:shadow-xl focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background">
+      <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 ease-out hover:border-[var(--gold)]/40 hover:shadow-xl hover:shadow-black/40 focus-within:ring-2 focus-within:ring-[var(--gold)] focus-within:ring-offset-2 focus-within:ring-offset-background">
         {/*
           Toda la superficie informativa (imagen + nombre + precio) navega
           a la página del producto -- "Agregar al carrito" queda fuera del
@@ -116,6 +116,10 @@ export function ProductCard({
               />
             ) : (
               <>
+                {/* Mismo monograma dorado que `CategoryCard`, para que un
+                    producto sin foto todavía no rompa el ritmo visual de
+                    la grilla. */}
+                <div className="absolute inset-0 bg-[radial-gradient(120%_100%_at_50%_0%,color-mix(in_oklab,var(--gold)_14%,transparent),transparent_65%)] transition-transform duration-500 ease-out group-hover:scale-[1.06]" />
                 <div
                   className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.06]"
                   style={
@@ -127,7 +131,7 @@ export function ProductCard({
                   }
                 />
                 <div
-                  className="absolute inset-0 text-foreground opacity-[0.12]"
+                  className="absolute inset-0 text-foreground opacity-[0.08]"
                   style={{
                     backgroundImage: "radial-gradient(currentColor 1px, transparent 1px)",
                     backgroundSize: "16px 16px",
@@ -135,7 +139,7 @@ export function ProductCard({
                 />
                 <span
                   aria-hidden="true"
-                  className="absolute -right-2 -bottom-4 text-8xl leading-none font-bold text-foreground/[0.08] select-none"
+                  className="font-display absolute inset-0 flex items-center justify-center text-6xl leading-none font-semibold text-[var(--gold)]/25 select-none"
                 >
                   {product.name.charAt(0)}
                 </span>
@@ -175,6 +179,18 @@ export function ProductCard({
               dense ? "gap-1 p-2 pb-1.5 sm:p-3 sm:pb-2" : "gap-1.5 p-3 pb-2 sm:p-4 sm:pb-2"
             )}
           >
+            {/*
+              La marca arriba del nombre es la convención de cualquier
+              perfumería: el cliente busca primero por casa (Rayhaan,
+              Afnan, Rasasi) y recién después por fragancia. El dato ya
+              venía en `categories` -- sólo faltaba mostrarlo.
+            */}
+            {category ? (
+              <span className="truncate text-[10px] font-semibold tracking-[0.14em] text-[var(--gold)]/85 uppercase">
+                {category.name}
+              </span>
+            ) : null}
+
             <h3
               className={cn(
                 "font-medium text-foreground",

@@ -44,7 +44,12 @@ export type AdminOrder = {
   createdAt: string;
   status: OrderStatus;
   deliveryMethod: "delivery" | "pickup";
-  paymentMethod: "transfer" | "cash";
+  paymentMethod: string;
+  /** Snapshot del nombre del método elegido. null en los pedidos
+   * anteriores a `payment_methods`, que sólo guardaron el valor legacy
+   * ('transfer'/'cash') en `payment_method` -- `getOrderPaymentLabel`
+   * (`lib/payment-methods.ts`) resuelve los dos casos. */
+  paymentMethodName: string | null;
   department: string | null;
   city: string | null;
   neighborhood: string | null;
@@ -70,7 +75,8 @@ type OrderRow = {
   order_number: number;
   status: OrderStatus;
   delivery_method: "delivery" | "pickup";
-  payment_method: "transfer" | "cash";
+  payment_method: string;
+  payment_method_name: string | null;
   department: string | null;
   city: string | null;
   neighborhood: string | null;
@@ -97,7 +103,7 @@ type OrderRow = {
 };
 
 const ORDER_SELECT = `
-  id, order_number, status, delivery_method, payment_method,
+  id, order_number, status, delivery_method, payment_method, payment_method_name,
   department, city, neighborhood, address, reference, latitude, longitude, notes,
   subtotal, shipping_cost, shipping_rate_name, total, whatsapp_message, created_at,
   customers ( first_name, last_name, phone, email ),
@@ -115,6 +121,7 @@ function mapOrderRow(row: OrderRow): AdminOrder {
     status: row.status,
     deliveryMethod: row.delivery_method,
     paymentMethod: row.payment_method,
+    paymentMethodName: row.payment_method_name,
     department: row.department,
     city: row.city,
     neighborhood: row.neighborhood,

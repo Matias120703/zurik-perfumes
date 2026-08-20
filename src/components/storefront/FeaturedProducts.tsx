@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 
 import { ProductCard } from "@/components/storefront/ProductCard";
+import { SectionHeading } from "@/components/storefront/SectionHeading";
 import type { Category } from "@/config/categories";
 import type { Product } from "@/config/products";
 import { siteConfig } from "@/config/site";
@@ -37,16 +38,13 @@ export function FeaturedProducts({
   if (featuredProducts.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-20 lg:py-24">
-      <div className="flex flex-col gap-3">
-        <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          {eyebrow}
-        </span>
-        <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          {title}
-        </h2>
-        <p className="max-w-md text-muted-foreground">{subtitle}</p>
-      </div>
+    <section className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
+      <SectionHeading
+        eyebrow={eyebrow}
+        title={title}
+        subtitle={subtitle}
+        action={{ label: "Ver todo el catálogo", href: "/productos" }}
+      />
 
       <motion.div
         initial={shouldReduceMotion ? "show" : "hidden"}

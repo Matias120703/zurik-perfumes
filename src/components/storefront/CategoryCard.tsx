@@ -60,7 +60,7 @@ export function CategoryCard({
     >
       <Link
         href={`/categorias/${category.slug}`}
-        className="group relative flex aspect-[4/3] h-full flex-col overflow-hidden rounded-2xl border border-border bg-card outline-none transition-all duration-300 ease-out hover:border-foreground/15 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="group relative flex aspect-[4/3] h-full flex-col overflow-hidden rounded-2xl border border-border bg-card outline-none transition-all duration-300 ease-out hover:border-[var(--gold)]/40 hover:shadow-xl hover:shadow-black/40 focus-visible:ring-2 focus-visible:ring-[var(--gold)] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         {showImage ? (
           <Image
@@ -72,7 +72,15 @@ export function CategoryCard({
             onError={() => setImageFailed(true)}
           />
         ) : (
+          /*
+            Placeholder de marca sin foto todavía. Sobre el fondo negro,
+            el gris plano de antes se leía como "algo falta"; el halo
+            dorado + la inicial en serif lo convierten en un monograma
+            deliberado, que es como una perfumería presenta una casa de
+            fragancias cuando no tiene una foto de campaña.
+          */
           <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-105">
+            <div className="absolute inset-0 bg-[radial-gradient(120%_100%_at_50%_0%,color-mix(in_oklab,var(--gold)_16%,transparent),transparent_65%)]" />
             <div
               className="absolute inset-0"
               style={
@@ -84,7 +92,7 @@ export function CategoryCard({
               }
             />
             <div
-              className="absolute inset-0 text-foreground opacity-[0.12]"
+              className="absolute inset-0 text-foreground opacity-[0.08]"
               style={{
                 backgroundImage: "radial-gradient(currentColor 1px, transparent 1px)",
                 backgroundSize: "16px 16px",
@@ -92,7 +100,7 @@ export function CategoryCard({
             />
             <span
               aria-hidden="true"
-              className="absolute -right-2 -bottom-4 text-8xl leading-none font-bold text-foreground/[0.08] select-none"
+              className="font-display absolute inset-0 flex items-center justify-center text-7xl leading-none font-semibold text-[var(--gold)]/25 select-none"
             >
               {initial}
             </span>

@@ -5,7 +5,9 @@ import { usePathname } from "next/navigation";
 import {
   BadgePercent,
   Boxes,
+  CreditCard,
   LayoutDashboard,
+  LayoutTemplate,
   Package,
   Settings,
   ShoppingCart,
@@ -32,6 +34,7 @@ type AdminNavItem = {
 
 const NAV_ITEMS: AdminNavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { label: "Contenido", href: "/admin/contenido", icon: LayoutTemplate },
   { label: "Productos", href: "/admin/productos", icon: Package },
   { label: "Categorías", href: "/admin/categorias", icon: Tags },
   { label: "Inventario", href: "/admin/inventario", icon: Boxes },
@@ -39,6 +42,7 @@ const NAV_ITEMS: AdminNavItem[] = [
   { label: "Clientes", href: "/admin/clientes", icon: Users },
   { label: "Promociones", href: "/admin/promociones", icon: BadgePercent },
   { label: "Logística", href: "/admin/logistica", icon: Truck },
+  { label: "Métodos de pago", href: "/admin/pagos", icon: CreditCard },
   { label: "Configuración", href: "/admin/configuracion", icon: Settings },
 ];
 

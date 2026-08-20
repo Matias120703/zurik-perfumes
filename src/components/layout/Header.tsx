@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
-import { Menu, MessageCircle, Search, ShoppingCart } from "lucide-react";
+import { Menu, MessageCircle, Search, ShoppingCart, Store } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,22 @@ import {
 } from "@/components/ui/sheet";
 import { mainNav } from "@/config/navigation";
 import { siteConfig } from "@/config/site";
+import { getWholesaleHref, type HomeContent } from "@/lib/home-content";
 import type { BusinessSettings } from "@/services/storefront/business";
 import { cn, getWhatsAppUrl } from "@/lib/utils";
 import { useCartStore } from "@/store/cart-store";
 
-export function Header({ settings }: { settings: BusinessSettings }) {
+export function Header({
+  settings,
+  homeContent,
+}: {
+  settings: BusinessSettings;
+  /**
+   * Sólo para el acceso al grupo mayorista: es el CTA de negocio que el
+   * dueño quiere visible desde cualquier página, no sólo en la Home.
+   */
+  homeContent: HomeContent;
+}) {
   const [isScrolled, setIsScrolled] = useState(false);
   const shouldReduceMotion = useReducedMotion();
 
@@ -46,6 +57,12 @@ export function Header({ settings }: { settings: BusinessSettings }) {
 
   const whatsappHref = getWhatsAppUrl(settings.whatsappNumber, settings.whatsappDefaultMessage);
   const showLogo = Boolean(settings.logoUrl);
+  const showWholesale = homeContent.wholesaleEnabled;
+  const wholesaleHref = getWholesaleHref({
+    groupUrl: homeContent.wholesaleGroupUrl,
+    whatsappNumber: settings.whatsappNumber,
+    message: homeContent.wholesaleWhatsappMessage,
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -63,8 +80,8 @@ export function Header({ settings }: { settings: BusinessSettings }) {
       className={cn(
         "sticky top-0 z-50 transition-[background-color,box-shadow,padding] duration-300",
         isScrolled
-          ? "border-b border-border bg-background/80 py-3 shadow-sm backdrop-blur-md"
-          : "border-b border-transparent bg-background/0 py-5"
+          ? "border-b border-[var(--gold)]/20 bg-background/85 py-3 shadow-lg shadow-black/20 backdrop-blur-xl"
+          : "border-b border-transparent bg-background/0 py-4"
       )}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6">
@@ -79,37 +96,54 @@ export function Header({ settings }: { settings: BusinessSettings }) {
               priority
             />
           ) : (
-            <span className="text-xl font-bold tracking-tight text-foreground">
+            <span className="font-display text-xl font-semibold tracking-[0.18em] text-foreground uppercase">
               {settings.storeName}
             </span>
           )}
         </Link>
 
-        <nav className="hidden items-center gap-8 lg:flex">
+        <nav className="hidden items-center gap-7 lg:flex">
           {mainNav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="relative text-sm font-medium text-muted-foreground transition-colors after:absolute after:-bottom-1.5 after:left-0 after:h-px after:w-0 after:bg-[var(--gold)] after:transition-all after:duration-300 hover:text-foreground hover:after:w-full"
             >
               {item.label}
             </Link>
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 lg:flex">
-          <SearchInput inputClassName="w-56" />
+        <div className="hidden items-center gap-2 lg:flex">
+          <SearchInput inputClassName="w-44 xl:w-56" />
+
+          {/*
+            El acceso al grupo mayorista vive en la barra superior, no
+            sólo en su sección de la Home: es el segundo negocio de la
+            tienda (sumar revendedores) y quien llega buscando eso no
+            debería tener que scrollear para encontrarlo.
+          */}
+          {showWholesale ? (
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              className="border-[var(--gold)]/45 text-[var(--gold)] hover:bg-[var(--gold)]/10 hover:text-[var(--gold)]"
+              render={<a href={wholesaleHref} target="_blank" rel="noopener noreferrer" />}
+            >
+              <Store className="size-4" aria-hidden="true" />
+              Mayoristas
+            </Button>
+          ) : null}
 
           <Button
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
             nativeButton={false}
-            render={
-              <a href={whatsappHref} target="_blank" rel="noopener noreferrer" />
-            }
+            aria-label="Escribinos por WhatsApp"
+            render={<a href={whatsappHref} target="_blank" rel="noopener noreferrer" />}
           >
-            <MessageCircle className="size-4" />
-            WhatsApp
+            <MessageCircle className="size-5" />
           </Button>
 
           <CartButton />
@@ -149,20 +183,35 @@ export function Header({ settings }: { settings: BusinessSettings }) {
                   ))}
                 </nav>
 
-                <Button
-                  variant="outline"
-                  nativeButton={false}
-                  render={
-                    <a
-                      href={whatsappHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    />
-                  }
-                >
-                  <MessageCircle className="size-4" />
-                  WhatsApp
-                </Button>
+                <div className="flex flex-col gap-2">
+                  {showWholesale ? (
+                    <Button
+                      nativeButton={false}
+                      className="bg-[var(--gold)] font-semibold text-[var(--gold-foreground)] hover:opacity-90"
+                      render={
+                        <a href={wholesaleHref} target="_blank" rel="noopener noreferrer" />
+                      }
+                    >
+                      <Store className="size-4" aria-hidden="true" />
+                      {homeContent.wholesaleCtaLabel ?? "Grupo mayorista"}
+                    </Button>
+                  ) : null}
+
+                  <Button
+                    variant="outline"
+                    nativeButton={false}
+                    render={
+                      <a
+                        href={whatsappHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      />
+                    }
+                  >
+                    <MessageCircle className="size-4" />
+                    WhatsApp
+                  </Button>
+                </div>
               </div>
             </SheetContent>
           </Sheet>
