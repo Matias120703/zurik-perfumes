@@ -28,6 +28,33 @@ const item: Variants = {
 /** Cuántas garantías se repiten como "chips" de confianza bajo los CTAs. */
 const MAX_TRUST_CHIPS = 3;
 
+/**
+ * Permite resaltar en dorado una parte del título del hero envolviéndola
+ * entre asteriscos desde /admin/contenido:
+ *
+ *   "Fragancias que *se recuerdan*"  ->  "se recuerdan" en dorado
+ *
+ * Se eligió una marca en el texto y no dos campos separados
+ * ("título" / "título resaltado") porque el resaltado no siempre va al
+ * final: así el dueño decide qué parte destacar sin que el componente
+ * tenga que adivinarlo ni partir por cantidad de palabras.
+ */
+function renderHighlightedTitle(title: string) {
+  return title.split(/(\*[^*]+\*)/g).map((chunk, i) => {
+    if (chunk.startsWith("*") && chunk.endsWith("*") && chunk.length > 2) {
+      return (
+        <span
+          key={i}
+          className="bg-gradient-to-r from-[var(--gold-soft)] via-[var(--gold)] to-[var(--gold-deep)] bg-clip-text text-transparent"
+        >
+          {chunk.slice(1, -1)}
+        </span>
+      );
+    }
+    return chunk;
+  });
+}
+
 export function Hero({
   settings,
   showcaseProducts,
@@ -104,7 +131,7 @@ export function Hero({
             variants={item}
             className="font-display text-[2.6rem] leading-[1.03] font-semibold tracking-tight text-foreground sm:text-6xl lg:text-[4.2rem]"
           >
-            {content.heroTitle ?? siteConfig.hero.title}
+            {renderHighlightedTitle(content.heroTitle ?? siteConfig.hero.title)}
           </motion.h1>
 
           <motion.p variants={item} className="max-w-lg text-base text-muted-foreground sm:text-lg">
@@ -180,27 +207,28 @@ export function Hero({
           transition={{ duration: 0.7, ease: "easeOut", delay: 0.15 }}
           className="relative"
         >
-          {/* Resplandor detrás del showcase: separa el frasco del fondo. */}
+          {/*
+            Resplandor detrás del frasco: le da profundidad y separa la
+            foto del negro sin necesitar ningún marco. Junto con la
+            máscara de `ProductShowcase`, es lo que reemplaza a la tarjeta
+            con borde que encajonaba la imagen -- ahora la foto se funde
+            con el fondo en vez de terminar en un rectángulo.
+          */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-6 rounded-full bg-[var(--gold)]/10 blur-3xl"
+            className="pointer-events-none absolute inset-x-4 top-4 bottom-24 rounded-full bg-[var(--gold)]/10 blur-3xl"
           />
           <div className="relative">
             <ProductShowcase products={showcaseProducts} />
           </div>
 
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute -top-3 -left-3 hidden size-16 rounded-tl-3xl border-t border-l border-[var(--gold)]/40 lg:block"
-          />
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-3 -bottom-3 hidden size-16 rounded-br-3xl border-r border-b border-[var(--gold)]/40 lg:block"
-          />
-
-          <span className="pointer-events-none absolute -top-2 right-6 hidden items-center gap-1.5 rounded-full border border-[var(--gold)]/30 bg-background/90 px-3 py-1 text-[10px] font-semibold tracking-wide text-[var(--gold)] uppercase backdrop-blur-sm lg:inline-flex">
-            <Sparkles className="size-3" aria-hidden="true" />
-            Stock disponible
+          {/* Sello circular, el único elemento con contorno de esta
+              columna -- funciona como acento, no como marco. */}
+          <span className="pointer-events-none absolute -top-2 right-2 hidden size-24 flex-col items-center justify-center gap-0.5 rounded-full border border-[var(--gold)]/35 bg-background/80 text-center text-[9px] leading-tight font-semibold tracking-wider text-[var(--gold)] uppercase backdrop-blur-sm lg:flex">
+            <Sparkles className="size-3.5" aria-hidden="true" />
+            Stock
+            <br />
+            disponible
           </span>
         </motion.div>
       </div>

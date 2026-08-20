@@ -53,7 +53,12 @@ const playfair = Playfair_Display({
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPublicBusinessSettings();
   return {
-    title: settings.storeName,
+    /* El nombre solo ("ZURIK") no le dice nada a quien lo ve en una
+       pestaña o en un resultado de búsqueda -- se le suma la bajada
+       cuando hay una cargada. */
+    title: settings.tagline
+      ? `${settings.storeName} · ${settings.tagline}`
+      : settings.storeName,
     description: settings.storeDescription ?? undefined,
     icons: { icon: settings.faviconUrl ?? "/favicon-default.ico" },
   };

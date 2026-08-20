@@ -5,36 +5,46 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import type { Product } from "@/config/products";
 import { useProductShowcase } from "@/hooks/useProductShowcase";
 import { isRealImageUrl } from "@/lib/products";
 import { cn, formatPrice } from "@/lib/utils";
 
 const slideVariants: Variants = {
-  enter: (direction: number) => ({ x: direction > 0 ? "14%" : "-14%", opacity: 0 }),
+  enter: (direction: number) => ({ x: direction > 0 ? "10%" : "-10%", opacity: 0 }),
   center: { x: "0%", opacity: 1 },
-  exit: (direction: number) => ({ x: direction > 0 ? "-14%" : "14%", opacity: 0 }),
+  exit: (direction: number) => ({ x: direction > 0 ? "-10%" : "10%", opacity: 0 }),
 };
 
 /**
- * Reemplaza el panel derecho estático del Hero (Sprint 6.3): un carrusel
- * premium de productos reales, en el mismo contenedor visual de siempre
- * (`aspect-[4/5]`, `rounded-[2rem]`, `border`) para no alterar el layout
- * que ya tenía el Hero. `products` llega resuelto por Home
- * (`getPublicHeroProducts()`) -- este componente nunca consulta Supabase,
- * solo presenta lo que ya recibió y delega el estado de rotación/pausa/
- * navegación a `useProductShowcase`.
+ * Máscara que hace que la foto se funda con el negro de la página en vez
+ * de terminar en un borde recto.
+ *
+ * Es un degradado radial usado como `mask`: opaco en el centro (donde
+ * está el frasco) y transparente hacia los bordes, así la imagen "se
+ * apaga" contra el fondo. Reemplaza a la tarjeta con borde y esquinas
+ * redondeadas que tenía antes, que encajonaba la foto y cortaba en seco.
+ *
+ * Va en `style` y no en clases de Tailwind porque son dos propiedades
+ * (con el prefijo -webkit- para Safari) con un valor largo: escrito como
+ * clase arbitraria queda ilegible y hay que escaparlo entero.
+ */
+const FADE_MASK = "radial-gradient(115% 85% at 60% 42%, #000 42%, rgba(0,0,0,.55) 66%, transparent 88%)";
+
+/**
+ * Panel derecho del Hero: los productos reales de la tienda, rotando.
+ *
+ * `products` llega resuelto por Home (`getPublicHeroProducts()`) -- este
+ * componente nunca consulta Supabase, sólo presenta lo que recibió y
+ * delega el estado de rotación/pausa/navegación a `useProductShowcase`.
  *
  * `AnimatePresence` con `initial={false}` evita que la primera imagen
- * anime su entrada -- eso significa que la primera pintada (servidor y
- * cliente) es siempre estática, sin depender de `useReducedMotion()`
- * (que devuelve `false` en el servidor y podría devolver `true` en el
- * cliente si el sistema operativo pide "reducir movimiento"): mismo
- * riesgo de mismatch de hidratación ya diagnosticado en `Header.tsx` y
- * `PromotionalBanner.tsx`, evitado acá desde el diseño en vez de con un
- * `mounted`-gate, porque solo hace falta para transiciones -- nunca para
- * el primer render.
+ * anime su entrada -- así la primera pintada (servidor y cliente) es
+ * siempre estática, sin depender de `useReducedMotion()` (que devuelve
+ * `false` en el servidor y podría devolver `true` en el cliente si el
+ * sistema pide "reducir movimiento"): mismo riesgo de mismatch de
+ * hidratación ya diagnosticado en `Header.tsx`, evitado acá desde el
+ * diseño en vez de con un `mounted`-gate.
  */
 export function ProductShowcase({ products }: { products: Product[] }) {
   const shouldReduceMotion = useReducedMotion();
@@ -47,116 +57,120 @@ export function ProductShowcase({ products }: { products: Product[] }) {
 
   return (
     <div
-      // `md:max-w-md` reduce el tamaño del Showcase específicamente en
-      // tablet (768-1023px, pedido explícito del sprint); `lg:max-w-none`
-      // lo anula en desktop para que vuelva a ocupar toda su columna del
-      // grid de dos columnas que ya tenía el Hero (sin tocar ese grid acá
-      // -- esto vive enteramente adentro de este componente). En mobile
-      // (<768px) no hay límite: ocupa el ancho completo, debajo del texto.
-      className="relative mx-auto aspect-[4/5] w-full overflow-hidden rounded-[2rem] border border-border bg-muted/40 md:max-w-md lg:max-w-none"
+      className="relative mx-auto w-full md:max-w-md lg:max-w-none"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <AnimatePresence mode="wait" initial={false} custom={direction}>
-        <motion.div
-          key={current.id}
-          custom={direction}
-          variants={slideVariants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ duration: shouldReduceMotion ? 0.15 : 0.5, ease: "easeInOut" }}
-          className="absolute inset-0"
-        >
-          {primaryImage ? (
-            <Image
-              src={primaryImage}
-              alt={current.name}
-              fill
-              sizes="(min-width: 1024px) 40vw, 90vw"
-              priority={index === 0}
-              className="object-cover"
-            />
-          ) : (
-            <>
-              <div className="absolute -top-10 -left-10 size-64 rounded-full bg-foreground/5 blur-3xl" />
-              <div className="absolute -right-10 -bottom-16 size-72 rounded-full bg-foreground/10 blur-3xl" />
-              <div
-                className="absolute inset-0 text-foreground opacity-[0.15]"
-                style={{
-                  backgroundImage: "radial-gradient(currentColor 1px, transparent 1px)",
-                  backgroundSize: "18px 18px",
-                }}
+      {/* La foto: sin marco, sin fondo, sin esquinas redondeadas. */}
+      <div className="relative aspect-square w-full lg:aspect-[4/5]">
+        <AnimatePresence mode="wait" initial={false} custom={direction}>
+          <motion.div
+            key={current.id}
+            custom={direction}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: shouldReduceMotion ? 0.15 : 0.55, ease: "easeInOut" }}
+            className="absolute inset-0"
+            style={{ maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK }}
+          >
+            {primaryImage ? (
+              <Image
+                src={primaryImage}
+                alt={current.name}
+                fill
+                sizes="(min-width: 1024px) 45vw, 90vw"
+                priority={index === 0}
+                className="object-contain object-center"
               />
-            </>
-          )}
-
-          {/* Degradado para que nombre/precio/botón sean legibles sobre
-              cualquier imagen, sin depender de qué tan clara u oscura sea. */}
-          <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/20 to-transparent" />
-
-          <div className="absolute inset-x-0 bottom-0 flex flex-col gap-4 p-6 pb-11 sm:p-8 sm:pb-12">
-            <div className="flex flex-col gap-1">
-              <h3 className="text-xl font-bold text-balance text-foreground sm:text-2xl">
-                {current.name}
-              </h3>
-              <div className="flex items-baseline gap-2">
-                <span className="text-lg font-bold text-foreground">
-                  {formatPrice(current.price)}
+            ) : (
+              /* Sin foto real todavía: la inicial del producto en dorado,
+                 con el mismo lenguaje que el resto de los placeholders. */
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span
+                  aria-hidden="true"
+                  className="font-display text-[12rem] leading-none font-semibold text-[var(--gold)]/15 select-none"
+                >
+                  {current.name.charAt(0)}
                 </span>
-                {current.oldPrice ? (
-                  <span className="text-sm text-muted-foreground line-through">
-                    {formatPrice(current.oldPrice)}
-                  </span>
-                ) : null}
               </div>
-            </div>
-
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-fit">
-              <Button nativeButton={false} render={<Link href={`/productos/${current.slug}`} />}>
-                Ver producto
-                <ArrowRight className="size-4" />
-              </Button>
-            </motion.div>
-          </div>
-        </motion.div>
-      </AnimatePresence>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
       {/*
-        Flechas + indicadores viven FUERA del slide animado (a diferencia
-        del nombre/precio/botón, que sí cambian con cada producto): son
-        controles de navegación estables, no contenido -- si vivieran
-        dentro del `motion.div` que AnimatePresence reemplaza en cada
-        auto-avance, se desmontarían y remontarían cada ~1.5s, con el
-        riesgo real de que un click quede "pisado" justo cuando el
-        carrusel avanza solo (encontrado durante la verificación de este
-        mismo sprint, con clicks intermitentemente fallidos sobre un
-        indicador mientras el auto-avance seguía activo).
+        Nombre y precio: sobre el fondo de la página, no encima de la foto.
+        Como la máscara ya apagó la imagen en esa zona, el texto se lee
+        sobre negro y no hace falta ningún velo ni caja detrás.
+      */}
+      <div className="relative -mt-6 flex flex-col items-center gap-2 text-center lg:-mt-10">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={current.id}
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="flex flex-col items-center gap-1.5"
+          >
+            <h3 className="font-display text-xl font-semibold text-balance text-foreground sm:text-2xl">
+              {current.name}
+            </h3>
+            <div className="flex items-baseline justify-center gap-2">
+              <span className="text-base font-semibold text-[var(--gold)] sm:text-lg">
+                {formatPrice(current.price)}
+              </span>
+              {current.oldPrice ? (
+                <span className="text-sm text-muted-foreground line-through">
+                  {formatPrice(current.oldPrice)}
+                </span>
+              ) : null}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        <Link
+          href={`/productos/${current.slug}`}
+          className="group/link mt-1 inline-flex items-center gap-1.5 border-b border-[var(--gold)]/30 pb-0.5 text-xs font-medium tracking-wide text-[var(--gold)] uppercase transition-colors hover:border-[var(--gold)]"
+        >
+          Ver producto
+          <ArrowRight
+            className="size-3.5 transition-transform duration-200 group-hover/link:translate-x-0.5"
+            aria-hidden="true"
+          />
+        </Link>
+      </div>
+
+      {/*
+        Flechas e indicadores viven FUERA del slide animado (a diferencia
+        del nombre/precio, que sí cambian con cada producto): son controles
+        estables, no contenido -- si vivieran dentro del `motion.div` que
+        AnimatePresence reemplaza en cada auto-avance, se desmontarían y
+        remontarían cada ~1.5s, con el riesgo real de que un click quede
+        "pisado" justo cuando el carrusel avanza solo.
       */}
       {total > 1 ? (
         <>
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="icon"
             aria-label="Producto anterior"
             onClick={goPrev}
-            className="absolute top-1/2 left-3 z-10 -translate-y-1/2 rounded-full bg-background/70 backdrop-blur-sm hover:bg-background/90"
+            className="absolute top-[38%] left-0 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--gold)]/25 bg-background/60 text-[var(--gold)] backdrop-blur-sm transition-colors hover:border-[var(--gold)]/60 hover:bg-background/90"
           >
             <ChevronLeft className="size-4" />
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
-            variant="ghost"
-            size="icon"
             aria-label="Producto siguiente"
             onClick={goNext}
-            className="absolute top-1/2 right-3 z-10 -translate-y-1/2 rounded-full bg-background/70 backdrop-blur-sm hover:bg-background/90"
+            className="absolute top-[38%] right-0 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--gold)]/25 bg-background/60 text-[var(--gold)] backdrop-blur-sm transition-colors hover:border-[var(--gold)]/60 hover:bg-background/90"
           >
             <ChevronRight className="size-4" />
-          </Button>
+          </button>
 
-          <div className="absolute inset-x-0 bottom-4 z-10 flex justify-center gap-1.5 sm:bottom-5">
+          <div className="relative mt-5 flex justify-center gap-1.5">
             {products.map((product, dotIndex) => (
               <button
                 key={product.id}
@@ -165,8 +179,8 @@ export function ProductShowcase({ products }: { products: Product[] }) {
                 aria-current={dotIndex === index}
                 onClick={() => goTo(dotIndex, dotIndex > index ? 1 : -1)}
                 className={cn(
-                  "h-2 w-2 rounded-full bg-foreground/30 transition-all hover:bg-foreground/60",
-                  dotIndex === index && "w-5 bg-foreground"
+                  "h-1.5 w-1.5 rounded-full bg-foreground/25 transition-all hover:bg-[var(--gold)]/70",
+                  dotIndex === index && "w-5 bg-[var(--gold)]"
                 )}
               />
             ))}

@@ -170,35 +170,44 @@
    dueño de la tienda eligió un color, ese manda sobre el default.
    ============================================================ */
 .storefront-theme {
-  --background: oklch(0.145 0.006 60);
-  --foreground: oklch(0.968 0.004 85);
+  /*
+    Negro real, no marrón. Todos los grises van con croma 0: apenas se le
+    pone algo de croma en un tono cálido (que es como estaba antes,
+    `oklch(0.145 0.006 60)`), sobre una pantalla grande el fondo se lee
+    marrón/sepia en vez de negro. Con croma 0 el único color de la tienda
+    pasa a ser el dorado, que es justo lo que le da el contraste al logo y
+    a las fotos de los frascos.
+  */
+  --background: oklch(0.02 0 0);
+  --foreground: oklch(0.97 0 0);
 
-  --card: oklch(0.188 0.007 60);
-  --card-foreground: oklch(0.968 0.004 85);
-  --popover: oklch(0.188 0.007 60);
-  --popover-foreground: oklch(0.968 0.004 85);
+  --card: oklch(0.105 0 0);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.105 0 0);
+  --popover-foreground: oklch(0.97 0 0);
 
-  --primary: oklch(0.968 0.004 85);
-  --primary-foreground: oklch(0.16 0.008 60);
-  --secondary: oklch(0.245 0.008 60);
-  --secondary-foreground: oklch(0.968 0.004 85);
+  --primary: oklch(0.97 0 0);
+  --primary-foreground: oklch(0.06 0 0);
+  --secondary: oklch(0.16 0 0);
+  --secondary-foreground: oklch(0.97 0 0);
 
-  --muted: oklch(0.235 0.008 60);
-  --muted-foreground: oklch(0.72 0.012 75);
-  --accent: oklch(0.245 0.008 60);
-  --accent-foreground: oklch(0.968 0.004 85);
+  --muted: oklch(0.15 0 0);
+  --muted-foreground: oklch(0.70 0 0);
+  --accent: oklch(0.16 0 0);
+  --accent-foreground: oklch(0.97 0 0);
 
   --destructive: oklch(0.68 0.19 25);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.78 0.125 85);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.80 0.128 88);
 
-  /* Dorado de marca. Un solo lugar donde se define -- todo lo demás lo
-     consume por `var()`, para que cambiarlo sea un cambio de una línea. */
-  --gold: oklch(0.78 0.125 85);
-  --gold-soft: oklch(0.87 0.085 88);
-  --gold-deep: oklch(0.62 0.11 82);
-  --gold-foreground: oklch(0.16 0.01 60);
+  /* Dorado de marca, tomado del logo. Un solo lugar donde se define --
+     todo lo demás lo consume por `var()`, para que cambiarlo sea un
+     cambio de una línea. */
+  --gold: oklch(0.80 0.128 88);
+  --gold-soft: oklch(0.90 0.075 90);
+  --gold-deep: oklch(0.63 0.105 82);
+  --gold-foreground: oklch(0.06 0 0);
 
   /* Los tres tokens de marca apuntan al dorado por defecto: botones
      principales, badges de descuento y acentos de la tienda. */
@@ -238,6 +247,64 @@
 
 @utility text-gold {
   color: var(--gold);
+}
+
+/* ============================================================
+   Brillo del logo
+   ============================================================
+   Un destello dorado que recorre el monograma cada tanto, como el reflejo
+   sobre una joya al girarla. Se dibuja recortando un degradado con la
+   silueta del propio logo (`mask-image`), así el brillo sigue la forma de
+   las letras en vez de pasar por encima como una banda rectangular.
+
+   Va en CSS y no en Framer Motion a propósito: es decorativo y corre en
+   loop permanente, así que conviene que lo maneje el compositor del
+   navegador y no el hilo de JavaScript.
+   ============================================================ */
+.logo-shine {
+  position: relative;
+  display: inline-block;
+}
+
+.logo-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    color-mix(in oklab, var(--gold-soft) 85%, white) 47%,
+    color-mix(in oklab, var(--gold-soft) 85%, white) 53%,
+    transparent 62%
+  );
+  background-size: 280% 100%;
+  background-repeat: no-repeat;
+  mask-image: var(--logo-mask);
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  opacity: 0.85;
+  animation: logo-shine 6s ease-in-out infinite;
+}
+
+@keyframes logo-shine {
+  0%,
+  62% {
+    background-position: 180% 0;
+  }
+  92%,
+  100% {
+    background-position: -80% 0;
+  }
+}
+
+/* Respeta a quien pidió menos movimiento en su sistema. */
+@media (prefers-reduced-motion: reduce) {
+  .logo-shine::after {
+    animation: none;
+    opacity: 0;
+  }
 }
 
 /* Filete dorado con degradado -- separador recurrente entre secciones. */

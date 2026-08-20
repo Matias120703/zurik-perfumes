@@ -85,21 +85,44 @@ export function Header({
       )}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6">
-        <Link href="/" className="flex shrink-0 items-center gap-2">
+        {/*
+          Bloque de marca: el monograma a la izquierda y, al lado, el
+          nombre + la bajada. El logo que se sube desde el panel es sólo
+          el símbolo -- el nombre va como texto y no dentro de la imagen,
+          para que se lea nítido en cualquier pantalla y se pueda cambiar
+          desde Configuración sin volver a exportar un archivo.
+        */}
+        <Link
+          href="/"
+          aria-label={settings.storeName}
+          className="group flex shrink-0 items-center gap-2.5"
+        >
           {showLogo ? (
-            <Image
-              src={settings.logoUrl!}
-              alt={settings.storeName}
-              width={140}
-              height={36}
-              className="h-8 w-auto object-contain"
-              priority
-            />
-          ) : (
-            <span className="font-display text-xl font-semibold tracking-[0.18em] text-foreground uppercase">
+            <span
+              className="logo-shine transition-transform duration-500 ease-out group-hover:scale-[1.06]"
+              style={{ ["--logo-mask" as string]: `url(${settings.logoUrl})` }}
+            >
+              <Image
+                src={settings.logoUrl!}
+                alt=""
+                width={120}
+                height={120}
+                className="h-10 w-auto object-contain sm:h-11"
+                priority
+              />
+            </span>
+          ) : null}
+
+          <span className="flex flex-col leading-none">
+            <span className="font-display bg-gradient-to-r from-[var(--gold-soft)] via-[var(--gold)] to-[var(--gold-deep)] bg-clip-text text-lg font-semibold tracking-[0.3em] text-transparent uppercase sm:text-xl">
               {settings.storeName}
             </span>
-          )}
+            {settings.tagline ? (
+              <span className="mt-1 hidden text-[8px] font-medium tracking-[0.22em] text-muted-foreground uppercase sm:block sm:text-[9px]">
+                {settings.tagline}
+              </span>
+            ) : null}
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-7 lg:flex">

@@ -1292,6 +1292,28 @@ supabase/                              # Infraestructura de Supabase (Fase 8). E
 
 ---
 
+### Fase 38 — Sprint 7.4: identidad negro + dorado, logo real y hero sin marco
+
+- **Pedido del usuario, con el logo de la marca y una imagen de referencia**: la tienda "no es bien negro, es como un color marrón con dorado"; el hero no tiene que ser "un cuadro con borde donde están todos los perfumes girando" sino una foto que se difumina; y el logo tiene que estar arriba a la izquierda, con "un leve efecto movimiento".
+
+  **1. Negro real, no marrón.** La paleta de la Fase 34 usaba croma en un tono cálido (`oklch(0.145 0.006 60)`): en una pantalla grande eso se lee sepia, no negro. Todos los grises de `.storefront-theme` pasaron a **croma 0** y el fondo a `oklch(0.02 0 0)` (casi negro puro). Verificado por estilos computados: el `background` del body resuelve a `lab(0.007 0 0)` -- luminosidad casi nula y **a=0, b=0**, o sea sin ninguna desviación de color. El único color de la tienda pasa a ser el dorado, que es lo que le da el contraste al logo y a las fotos.
+
+  **2. El logo, que era un JPEG con fondo gris.** `logo_url` apuntaba a un JPEG de 640×640 con fondo `#f7f7f7`: sobre un header negro eso es un recuadro claro alrededor de la marca. No alcanzaba con bajarle el alfa al fondo, porque los píxeles del borde son una mezcla del dorado con el gris y quedan como un halo claro. Se generó un PNG transparente **deshaciendo el antialiasing** (`fg = (pixel - (1-a)*bg) / a`), lo que recupera el dorado real en cada borde. Salieron dos archivos a `public/branding/`: `zurik-monograma.png` (el símbolo ZR) y `zurik-logo.png` (marca completa). El script vive en el scratchpad, no en el repo: es una conversión de una sola vez, no parte del build.
+
+  **3. El bloque de marca del header** pasa a ser un lockup como el de la referencia: monograma + nombre en serif con degradado dorado + bajada en versalitas. El nombre va como **texto y no dentro de la imagen**, para que se lea nítido en cualquier pantalla y se pueda cambiar desde Configuración sin re-exportar un archivo. Por eso `store_name` quedó en `ZURIK` (antes "ZURIK Perfumería") y la categoría del negocio se movió a `tagline`. `generateMetadata` compone `nombre · bajada` para que el `<title>` no quede en una sola palabra.
+
+  **4. El movimiento del logo** es un destello dorado que recorre el monograma cada 6s, dibujado recortando un degradado con la silueta del propio logo (`mask-image: url(...)`), así el brillo sigue la forma de las letras en vez de pasar como una banda rectangular. Va en CSS y no en Framer Motion a propósito: es decorativo y corre en loop, conviene que lo maneje el compositor y no el hilo de JS. Respeta `prefers-reduced-motion`.
+
+  **5. El hero sin marco.** `ProductShowcase` dejó de ser una tarjeta (`rounded-[2rem]`, `border`, `bg-muted/40`) que encajonaba la foto y la cortaba en seco. Ahora la imagen lleva una **máscara radial** (`radial-gradient(115% 85% at 60% 42%, #000 42%, transparent 88%)`) que la funde con el negro de la página, y pasó de `object-cover` a `object-contain` para que el frasco se vea entero. El nombre y el precio salieron de adentro de la foto y van debajo, sobre el fondo -- como la máscara ya apagó la imagen en esa zona, no hace falta ningún velo ni caja detrás. Se quitaron además los dos ángulos con borde que `Hero.tsx` dibujaba alrededor; queda un solo elemento con contorno, el sello circular "Stock disponible", que funciona como acento y no como marco. Verificado: la raíz del showcase tiene `border-width: 0` y `border-radius: 0`, y no queda ningún elemento con borde adentro.
+
+  **6. Título del hero en dos colores.** La referencia muestra "Fragancias que" en blanco y "se recuerdan" en dorado. Se resuelve con una marca en el propio texto: lo que va entre asteriscos se renderiza en dorado (`Fragancias que *se recuerdan*`). Se eligió eso en vez de dos campos separados ("título" / "título resaltado") porque el resaltado no siempre va al final -- así el dueño decide qué parte destacar desde /admin/contenido, con la ayuda explicándolo en el formulario.
+
+  **7. La barra de anuncios** pasó de fondo oscuro con texto dorado a **fondo dorado con texto casi negro**, como en la referencia: es lo primero que se ve al entrar y fija el código de color de la tienda antes de que cargue la primera foto.
+
+  **Verificado en vivo** (estilos computados, no sólo el CSS fuente): fondo sin croma, dorado correcto, logo transparente servido desde `/branding/`, lockup mostrando "ZURIK | PERFUMERÍA ÁRABE & NICHO", `<h1>` con su tramo dorado y sin asteriscos visibles, máscara radial activa sobre la foto, cero bordes en el showcase, animación `logo-shine 6s` con la máscara apuntando al monograma, y sin scroll horizontal ni errores de consola en desktop (1440) ni en mobile (375). `tsc`, `lint` y `build` limpios.
+
+---
+
 
 ## 10. Reglas para futuras conversaciones
 

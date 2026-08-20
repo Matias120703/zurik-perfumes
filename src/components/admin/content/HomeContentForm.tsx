@@ -208,9 +208,16 @@ export function HomeContentForm() {
               <Input
                 id="heroTitle"
                 value={form.heroTitle ?? ""}
-                placeholder="Fragancias que se recuerdan"
+                placeholder="Fragancias que *se recuerdan*"
                 onChange={(event) => update("heroTitle", event.target.value || null)}
               />
+              <p className="text-xs text-muted-foreground">
+                Lo que pongas entre asteriscos se muestra en dorado. Ejemplo:{" "}
+                <span className="font-medium text-foreground">
+                  Fragancias que *se recuerdan*
+                </span>{" "}
+                → la segunda parte sale dorada. Los asteriscos no se ven.
+              </p>
             </FormField>
 
             <FormField label="Descripción" htmlFor="heroSubtitle">

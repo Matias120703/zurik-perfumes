@@ -37,9 +37,15 @@ export function AnnouncementBar({
   if (!enabled || total === 0) return null;
 
   return (
-    <div className="relative overflow-hidden border-b border-[var(--gold)]/25 bg-[color-mix(in_oklab,var(--gold)_12%,var(--background))]">
+    // Barra dorada con texto oscuro: es lo primero que se ve al entrar y
+    // marca el código de color de toda la tienda (negro + dorado) antes
+    // incluso de que cargue la primera foto.
+    <div className="relative overflow-hidden bg-gradient-to-r from-[var(--gold-deep)] via-[var(--gold)] to-[var(--gold-deep)]">
       <div className="mx-auto flex h-9 max-w-7xl items-center justify-center gap-2 px-6">
-        <Sparkles className="size-3.5 shrink-0 text-[var(--gold)]" aria-hidden="true" />
+        <Sparkles
+          className="size-3.5 shrink-0 text-[var(--gold-foreground)]/70"
+          aria-hidden="true"
+        />
 
         {/*
           `aria-live="polite"` para que un lector de pantalla anuncie el
@@ -54,14 +60,17 @@ export function AnnouncementBar({
               animate={{ opacity: 1, y: 0 }}
               exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
               transition={{ duration: shouldReduceMotion ? 0.15 : 0.35, ease: "easeOut" }}
-              className="absolute inset-0 flex items-center justify-center truncate text-center text-[11px] font-medium tracking-wide text-foreground/90 sm:text-xs"
+              className="absolute inset-0 flex items-center justify-center truncate text-center text-[11px] font-semibold tracking-wide text-[var(--gold-foreground)] sm:text-xs"
             >
               {messages[index]}
             </motion.p>
           </AnimatePresence>
         </div>
 
-        <Sparkles className="size-3.5 shrink-0 text-[var(--gold)]" aria-hidden="true" />
+        <Sparkles
+          className="size-3.5 shrink-0 text-[var(--gold-foreground)]/70"
+          aria-hidden="true"
+        />
       </div>
     </div>
   );
